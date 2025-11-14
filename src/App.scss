@@ -1,0 +1,272 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.header {
+  padding: 2rem;
+  text-align: center;
+  color: white;
+  z-index: 10;
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
+  }
+
+  p {
+    font-size: 1rem;
+    opacity: 0.9;
+    font-weight: 300;
+  }
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-container {
+  width: 100%;
+  height: 100%;
+  max-width: 1400px;
+  max-height: 800px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .model-viewer {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+.file-upload {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 3rem;
+  text-align: center;
+
+  &:hover {
+    background: #fafafa;
+  }
+
+  &.dragging {
+    background: #f0f0f0;
+    border-color: #667eea;
+  }
+
+  .upload-icon {
+    color: #667eea;
+    margin-bottom: 2rem;
+    transition: transform 0.3s ease;
+
+    svg {
+      width: 80px;
+      height: 80px;
+    }
+  }
+
+  &:hover .upload-icon {
+    transform: translateY(-8px);
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+  }
+
+  p {
+    font-size: 1rem;
+    color: #666;
+    max-width: 400px;
+    line-height: 1.5;
+    font-weight: 400;
+    margin-bottom: 1.5rem;
+  }
+
+  .upload-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .upload-btn {
+    padding: 0.875rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &.secondary {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        background: #f8f9ff;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+}
+
+.controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  z-index: 100;
+
+  button {
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #667eea;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+}
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #667eea;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 1.5rem;
+
+    h1 {
+      font-size: 1.75rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+    }
+  }
+
+  .content {
+    padding: 1rem;
+  }
+
+  .viewer-container {
+    border-radius: 16px;
+  }
+
+  .file-upload {
+    padding: 2rem;
+
+    .upload-icon svg {
+      width: 60px;
+      height: 60px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+    }
+
+    .upload-buttons {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .upload-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+      width: 100%;
+    }
+  }
+
+  .controls {
+    top: 1rem;
+    right: 1rem;
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+    }
+  }
+}
