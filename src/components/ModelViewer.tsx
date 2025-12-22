@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {
+  CSS2DRenderer,
+  CSS2DObject,
+} from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { VirtualFileSystem } from "../utils/VirtualFileSystem";
 
 interface ModelViewerProps {
@@ -23,6 +27,24 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   const [verticalClipPosition, setVerticalClipPosition] = useState(0);
   const horizontalPlaneRef = useRef<THREE.Plane | null>(null);
   const verticalPlaneRef = useRef<THREE.Plane | null>(null);
+
+  // Dimensions state
+  const [dimensionsEnabled, setDimensionsEnabled] = useState(false);
+  const [dimensionUnit, setDimensionUnit] = useState<
+    "mm" | "cm" | "m" | "in" | "ft"
+  >("mm");
+  const labelRendererRef = useRef<CSS2DRenderer | null>(null);
+  const dimensionsGroupRef = useRef<THREE.Group | null>(null);
+
+  // Unit conversion factors (from Three.js units to target unit)
+  // Assuming Three.js units are in meters by default
+  const unitConversions = {
+    mm: { factor: 1000, label: "мм" },
+    cm: { factor: 100, label: "см" },
+    m: { factor: 1, label: "м" },
+    in: { factor: 39.3701, label: "дюйм" },
+    ft: { factor: 3.28084, label: "фут" },
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -62,6 +84,15 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     containerRef.current.appendChild(canvas);
     rendererRef.current = renderer;
 
+    // CSS2D Renderer setup for labels
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(canvasWidth, canvasHeight);
+    labelRenderer.domElement.style.position = "absolute";
+    labelRenderer.domElement.style.top = "0";
+    labelRenderer.domElement.style.pointerEvents = "none";
+    containerRef.current.appendChild(labelRenderer.domElement);
+    labelRendererRef.current = labelRenderer;
+
     // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -89,6 +120,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
     // Grid helper
     const gridHelper = new THREE.GridHelper(20, 20, 0xcccccc, 0xe0e0e0);
+    gridHelper.position.y = -1.0; // Опускаем сетку немного ниже
     scene.add(gridHelper);
 
     // Initialize clipping planes
@@ -107,6 +139,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       animationId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
+      labelRenderer.render(scene, camera);
 
       frameCount++;
     };
@@ -121,6 +154,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
+      labelRenderer.setSize(width, height);
     };
     window.addEventListener("resize", handleResize);
 
@@ -134,6 +168,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       controls.dispose();
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
+      }
+      if (containerRef.current && labelRenderer.domElement) {
+        containerRef.current.removeChild(labelRenderer.domElement);
       }
     };
   }, []);
@@ -296,6 +333,146 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     };
   }, [fileSystem]);
 
+  // Create dimension line with arrows and label
+  const createDimensionLine = (
+    start: THREE.Vector3,
+    end: THREE.Vector3,
+    dimensionValue: number,
+    axis: string,
+    color: number
+  ): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Main dimension line
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+    const lineMaterial = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+    const line = new THREE.Line(lineGeometry, lineMaterial);
+    group.add(line);
+
+    // Arrow at start
+    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+    const arrowLength = 0.15;
+    const arrowStart = new THREE.ArrowHelper(
+      direction.clone().negate(),
+      start,
+      arrowLength,
+      color,
+      arrowLength * 0.6,
+      arrowLength * 0.4
+    );
+    group.add(arrowStart);
+
+    // Arrow at end
+    const arrowEnd = new THREE.ArrowHelper(
+      direction,
+      end,
+      arrowLength,
+      color,
+      arrowLength * 0.6,
+      arrowLength * 0.4
+    );
+    group.add(arrowEnd);
+
+    // Convert dimension to selected unit
+    const convertedValue =
+      dimensionValue * unitConversions[dimensionUnit].factor;
+    const unitLabel = unitConversions[dimensionUnit].label;
+
+    // Text label
+    const midPoint = new THREE.Vector3()
+      .addVectors(start, end)
+      .multiplyScalar(0.5);
+    const labelDiv = document.createElement("div");
+    labelDiv.className = "dimension-label";
+    labelDiv.textContent = `${axis}: ${convertedValue.toFixed(2)} ${unitLabel}`;
+    labelDiv.style.color = "#" + color.toString(16).padStart(6, "0");
+    labelDiv.style.fontSize = "14px";
+    labelDiv.style.fontWeight = "bold";
+    labelDiv.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+    labelDiv.style.padding = "4px 8px";
+    labelDiv.style.borderRadius = "4px";
+    labelDiv.style.border = "1px solid #" + color.toString(16).padStart(6, "0");
+    labelDiv.style.whiteSpace = "nowrap";
+
+    const labelObject = new CSS2DObject(labelDiv);
+    labelObject.position.copy(midPoint);
+    group.add(labelObject);
+
+    return group;
+  };
+
+  // Update dimensions display
+  useEffect(() => {
+    if (!currentModelRef.current || !sceneRef.current) return;
+
+    // Remove previous dimensions
+    if (dimensionsGroupRef.current) {
+      sceneRef.current.remove(dimensionsGroupRef.current);
+
+      // Properly dispose all children including CSS2DObject
+      dimensionsGroupRef.current.traverse((child) => {
+        if (child instanceof CSS2DObject) {
+          // Remove CSS2D element from DOM
+          if (child.element && child.element.parentNode) {
+            child.element.parentNode.removeChild(child.element);
+          }
+        } else if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+          child.geometry?.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => mat.dispose());
+          } else {
+            child.material?.dispose();
+          }
+        }
+      });
+
+      // Clear all children
+      while (dimensionsGroupRef.current.children.length > 0) {
+        dimensionsGroupRef.current.remove(
+          dimensionsGroupRef.current.children[0]
+        );
+      }
+
+      dimensionsGroupRef.current = null;
+    }
+
+    if (!dimensionsEnabled) return;
+
+    // Calculate bounding box
+    const box = new THREE.Box3().setFromObject(currentModelRef.current);
+    const size = box.getSize(new THREE.Vector3());
+    const min = box.min;
+    const max = box.max;
+
+    const dimensionsGroup = new THREE.Group();
+    const offset = 0.5; // Offset from model
+
+    // X dimension (Width) - Red
+    const xStart = new THREE.Vector3(min.x, min.y - offset, min.z - offset);
+    const xEnd = new THREE.Vector3(max.x, min.y - offset, min.z - offset);
+    const xLine = createDimensionLine(xStart, xEnd, size.x, "X", 0xff0000);
+    dimensionsGroup.add(xLine);
+
+    // Y dimension (Height) - Green
+    const yStart = new THREE.Vector3(min.x - offset, min.y, min.z - offset);
+    const yEnd = new THREE.Vector3(min.x - offset, max.y, min.z - offset);
+    const yLine = createDimensionLine(yStart, yEnd, size.y, "Y", 0x00ff00);
+    dimensionsGroup.add(yLine);
+
+    // Z dimension (Depth) - Blue
+    const zStart = new THREE.Vector3(min.x - offset, min.y - offset, min.z);
+    const zEnd = new THREE.Vector3(min.x - offset, min.y - offset, max.z);
+    const zLine = createDimensionLine(zStart, zEnd, size.z, "Z", 0x0000ff);
+    dimensionsGroup.add(zLine);
+
+    // Add bounding box helper for reference
+    const boxHelper = new THREE.Box3Helper(box, 0x888888);
+    dimensionsGroup.add(boxHelper);
+
+    sceneRef.current.add(dimensionsGroup);
+    dimensionsGroupRef.current = dimensionsGroup;
+  }, [dimensionsEnabled, dimensionUnit, currentModelRef.current]);
+
   // Update clipping planes when state changes
   useEffect(() => {
     if (!currentModelRef.current) return;
@@ -413,7 +590,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
         </div>
 
         {/* Vertical clipping */}
-        <div>
+        <div style={{ marginBottom: "15px" }}>
           <label
             style={{
               display: "flex",
@@ -451,6 +628,74 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                 }}
               >
                 Позиция: {verticalClipPosition.toFixed(2)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Dimensions */}
+        <div
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.2)",
+            paddingTop: "15px",
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: "8px",
+              fontSize: "13px",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={dimensionsEnabled}
+              onChange={(e) => setDimensionsEnabled(e.target.checked)}
+              style={{ marginRight: "8px", color: "black" }}
+            />
+            Показать размеры модели
+          </label>
+          {dimensionsEnabled && (
+            <div style={{ marginLeft: "20px" }}>
+              <div style={{ marginBottom: "8px" }}>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Единицы измерения:
+                </label>
+                <select
+                  value={dimensionUnit}
+                  onChange={(e) =>
+                    setDimensionUnit(
+                      e.target.value as "mm" | "cm" | "m" | "in" | "ft"
+                    )
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    color: "white",
+                    fontSize: "12px",
+                  }}
+                >
+                  <option value="mm">Миллиметры (мм)</option>
+                  <option value="cm">Сантиметры (см)</option>
+                  <option value="m">Метры (м)</option>
+                  <option value="in">Дюймы (in)</option>
+                  <option value="ft">Футы (ft)</option>
+                </select>
+              </div>
+              <div style={{ fontSize: "11px", color: "#c5c0c0ff" }}>
+                <div>🔴 Красный = Ширина (X)</div>
+                <div>🟢 Зелёный = Высота (Y)</div>
+                <div>🔵 Синий = Глубина (Z)</div>
               </div>
             </div>
           )}
