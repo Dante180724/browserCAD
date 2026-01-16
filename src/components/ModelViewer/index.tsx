@@ -37,6 +37,19 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   const labelRendererRef = useRef<CSS2DRenderer | null>(null);
   const dimensionsGroupRef = useRef<THREE.Group | null>(null);
 
+  // Distance measurement state
+  const [distanceMeasureEnabled, setDistanceMeasureEnabled] = useState(false);
+  const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
+  const clickCountRef = useRef(0);
+  const pointsRef = useRef<[THREE.Vector3, THREE.Vector3]>([
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+  ]);
+  const markerARef = useRef<THREE.Mesh | null>(null);
+  const markerBRef = useRef<THREE.Mesh | null>(null);
+  const distanceLineRef = useRef<THREE.Line | null>(null);
+  const distanceLabelRef = useRef<CSS2DObject | null>(null);
+
   // Unit conversion factors (from Three.js units to target unit)
   // Assuming Three.js units are in meters by default
   const unitConversions = {
@@ -46,6 +59,148 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     in: { factor: 39.3701, label: "дюйм" },
     ft: { factor: 3.28084, label: "фут" },
   };
+
+  // Update distance line between two points
+  const updateDistanceLine = (pointA: THREE.Vector3, pointB: THREE.Vector3) => {
+    if (!distanceLineRef.current) return;
+    const positions = distanceLineRef.current.geometry.attributes.position;
+    positions.setXYZ(0, pointA.x, pointA.y, pointA.z);
+    positions.setXYZ(1, pointB.x, pointB.y, pointB.z);
+    positions.needsUpdate = true;
+  };
+
+  // Create or update distance label
+  const updateDistanceLabel = (distance: number, midPoint: THREE.Vector3) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Remove previous label
+    if (distanceLabelRef.current) {
+      if (distanceLabelRef.current.element?.parentNode) {
+        distanceLabelRef.current.element.parentNode.removeChild(
+          distanceLabelRef.current.element
+        );
+      }
+      scene.remove(distanceLabelRef.current);
+      distanceLabelRef.current = null;
+    }
+
+    // Create new label
+    const convertedDistance = distance * unitConversions[dimensionUnit].factor;
+    const labelDiv = document.createElement("div");
+    labelDiv.className = "distance-label";
+    labelDiv.textContent = `${convertedDistance.toFixed(2)} ${unitConversions[dimensionUnit].label}`;
+
+    const labelObject = new CSS2DObject(labelDiv);
+    labelObject.position.copy(midPoint);
+    scene.add(labelObject);
+    distanceLabelRef.current = labelObject;
+  };
+
+  // Reset distance measurement
+  const resetDistanceMeasurement = () => {
+    clickCountRef.current = 0;
+    setMeasuredDistance(null);
+
+    if (markerARef.current) markerARef.current.visible = false;
+    if (markerBRef.current) markerBRef.current.visible = false;
+    if (distanceLineRef.current) distanceLineRef.current.visible = false;
+
+    // Remove label
+    if (distanceLabelRef.current && sceneRef.current) {
+      if (distanceLabelRef.current.element?.parentNode) {
+        distanceLabelRef.current.element.parentNode.removeChild(
+          distanceLabelRef.current.element
+        );
+      }
+      sceneRef.current.remove(distanceLabelRef.current);
+      distanceLabelRef.current = null;
+    }
+  };
+
+  // Handle click for distance measurement
+  const handleDistanceClick = (event: MouseEvent) => {
+    if (!distanceMeasureEnabled) return;
+    if (!containerRef.current || !cameraRef.current || !sceneRef.current) return;
+    if (!currentModelRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouse = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1
+    );
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, cameraRef.current);
+
+    // Only intersect with the model, not markers or helpers
+    const intersects = raycaster.intersectObject(currentModelRef.current, true);
+
+    if (intersects.length > 0) {
+      const point = intersects[0].point;
+      const clickIndex = clickCountRef.current;
+
+      pointsRef.current[clickIndex].copy(point);
+
+      // Update marker position
+      const marker = clickIndex === 0 ? markerARef.current : markerBRef.current;
+      if (marker) {
+        marker.position.copy(point);
+        marker.visible = true;
+      }
+
+      // Update line to current point (both ends same for first click)
+      if (clickIndex === 0) {
+        updateDistanceLine(point, point);
+        if (distanceLineRef.current) distanceLineRef.current.visible = true;
+      }
+
+      clickCountRef.current++;
+
+      if (clickCountRef.current > 1) {
+        // Calculate and display distance
+        const distance = pointsRef.current[0].distanceTo(pointsRef.current[1]);
+        setMeasuredDistance(distance);
+        updateDistanceLine(pointsRef.current[0], pointsRef.current[1]);
+
+        // Add label at midpoint
+        const midPoint = new THREE.Vector3()
+          .addVectors(pointsRef.current[0], pointsRef.current[1])
+          .multiplyScalar(0.5);
+        updateDistanceLabel(distance, midPoint);
+
+        clickCountRef.current = 0;
+      }
+    }
+  };
+
+  // Effect for distance measurement click handler
+  useEffect(() => {
+    const canvas = rendererRef.current?.domElement;
+    if (!canvas) return;
+
+    if (distanceMeasureEnabled) {
+      canvas.addEventListener("click", handleDistanceClick);
+      canvas.style.cursor = "crosshair";
+    } else {
+      canvas.style.cursor = "grab";
+      resetDistanceMeasurement();
+    }
+
+    return () => {
+      canvas.removeEventListener("click", handleDistanceClick);
+    };
+  }, [distanceMeasureEnabled, dimensionUnit]);
+
+  // Update label when unit changes
+  useEffect(() => {
+    if (measuredDistance !== null && distanceLabelRef.current) {
+      const midPoint = new THREE.Vector3()
+        .addVectors(pointsRef.current[0], pointsRef.current[1])
+        .multiplyScalar(0.5);
+      updateDistanceLabel(measuredDistance, midPoint);
+    }
+  }, [dimensionUnit, measuredDistance]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -124,6 +279,31 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     gridHelper.position.y = -1.0; // Опускаем сетку немного ниже
     scene.add(gridHelper);
 
+    // Distance measurement markers
+    const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff5555 });
+
+    const markerA = new THREE.Mesh(markerGeometry, markerMaterial);
+    markerA.visible = false;
+    scene.add(markerA);
+    markerARef.current = markerA;
+
+    const markerB = new THREE.Mesh(markerGeometry.clone(), markerMaterial.clone());
+    markerB.visible = false;
+    scene.add(markerB);
+    markerBRef.current = markerB;
+
+    // Distance measurement line
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(),
+      new THREE.Vector3(),
+    ]);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff5555 });
+    const distanceLine = new THREE.Line(lineGeometry, lineMaterial);
+    distanceLine.visible = false;
+    scene.add(distanceLine);
+    distanceLineRef.current = distanceLine;
+
     // Initialize clipping planes
     // Horizontal plane (cuts along Y axis)
     horizontalPlaneRef.current = new THREE.Plane(
@@ -172,6 +352,24 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       }
       if (containerRef.current && labelRenderer.domElement) {
         containerRef.current.removeChild(labelRenderer.domElement);
+      }
+      // Cleanup distance measurement objects
+      if (markerARef.current) {
+        markerARef.current.geometry.dispose();
+        (markerARef.current.material as THREE.Material).dispose();
+      }
+      if (markerBRef.current) {
+        markerBRef.current.geometry.dispose();
+        (markerBRef.current.material as THREE.Material).dispose();
+      }
+      if (distanceLineRef.current) {
+        distanceLineRef.current.geometry.dispose();
+        (distanceLineRef.current.material as THREE.Material).dispose();
+      }
+      if (distanceLabelRef.current?.element?.parentNode) {
+        distanceLabelRef.current.element.parentNode.removeChild(
+          distanceLabelRef.current.element
+        );
       }
     };
   }, []);
@@ -622,6 +820,59 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                 <div>🟢 Зелёный = Высота (Y)</div>
                 <div>🔵 Синий = Глубина (Z)</div>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Distance Measurement */}
+        <div className="control-section control-section--bordered">
+          <label className="control-label">
+            <input
+              type="checkbox"
+              checked={distanceMeasureEnabled}
+              onChange={(e) => setDistanceMeasureEnabled(e.target.checked)}
+              className="control-checkbox"
+            />
+            Измерение расстояния
+          </label>
+          {distanceMeasureEnabled && (
+            <div className="distance-container">
+              <div className="distance-instructions">
+                Кликните на две точки модели для измерения расстояния между ними
+              </div>
+              <div className="dimensions-select-wrapper">
+                <label className="dimensions-select-label">
+                  Единицы измерения:
+                </label>
+                <select
+                  value={dimensionUnit}
+                  onChange={(e) =>
+                    setDimensionUnit(
+                      e.target.value as "mm" | "cm" | "m" | "in" | "ft"
+                    )
+                  }
+                  className="dimensions-select"
+                >
+                  <option value="mm">Миллиметры (мм)</option>
+                  <option value="cm">Сантиметры (см)</option>
+                  <option value="m">Метры (м)</option>
+                  <option value="in">Дюймы (in)</option>
+                  <option value="ft">Футы (ft)</option>
+                </select>
+              </div>
+              {measuredDistance !== null && (
+                <div className="distance-result">
+                  <strong>Расстояние:</strong>{" "}
+                  {(measuredDistance * unitConversions[dimensionUnit].factor).toFixed(2)}{" "}
+                  {unitConversions[dimensionUnit].label}
+                </div>
+              )}
+              <button
+                className="distance-reset-btn"
+                onClick={resetDistanceMeasurement}
+              >
+                Сбросить измерение
+              </button>
             </div>
           )}
         </div>
