@@ -6,7 +6,8 @@ import {
   CSS2DRenderer,
   CSS2DObject,
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { VirtualFileSystem } from "../utils/VirtualFileSystem";
+import { VirtualFileSystem } from "../../utils/VirtualFileSystem";
+import "./style.css";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -514,57 +515,26 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   ]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div
-        ref={containerRef}
-        className="model-viewer"
-        style={{ width: "100%", height: "100%", color: "black" }}
-      />
+    <div className="model-viewer-wrapper">
+      <div ref={containerRef} className="model-viewer" />
 
       {/* Clipping controls */}
-      <div
-        style={{
-          position: "absolute",
-          top: "100px",
-          right: "20px",
-          background: "rgba(66, 100, 131, 0.9)",
-          padding: "15px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          minWidth: "250px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-        }}
-      >
-        <h3
-          style={{
-            margin: "0 0 15px 0",
-            fontSize: "14px",
-            fontWeight: "600",
-          }}
-        >
-          Разрезы модели
-        </h3>
+      <div className="controls-panel">
+        <h3 className="controls-panel__title">Разрезы модели</h3>
 
         {/* Horizontal clipping */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "8px",
-              fontSize: "13px",
-            }}
-          >
+        <div className="control-section">
+          <label className="control-label">
             <input
               type="checkbox"
               checked={horizontalClipEnabled}
               onChange={(e) => setHorizontalClipEnabled(e.target.checked)}
-              style={{ marginRight: "8px", color: "black" }}
+              className="control-checkbox"
             />
             Горизонтальный разрез
           </label>
           {horizontalClipEnabled && (
-            <div style={{ marginLeft: "20px" }}>
+            <div className="slider-container">
               <input
                 type="range"
                 min="-2"
@@ -574,15 +544,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                 onChange={(e) =>
                   setHorizontalClipPosition(parseFloat(e.target.value))
                 }
-                style={{ width: "100%" }}
+                className="slider-input"
               />
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "#c5c0c0ff",
-                  marginTop: "4px",
-                }}
-              >
+              <div className="slider-value">
                 Позиция: {horizontalClipPosition.toFixed(2)}
               </div>
             </div>
@@ -590,25 +554,18 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
         </div>
 
         {/* Vertical clipping */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "8px",
-              fontSize: "13px",
-            }}
-          >
+        <div className="control-section">
+          <label className="control-label">
             <input
               type="checkbox"
               checked={verticalClipEnabled}
               onChange={(e) => setVerticalClipEnabled(e.target.checked)}
-              style={{ marginRight: "8px", color: "black" }}
+              className="control-checkbox"
             />
             Вертикальный разрез
           </label>
           {verticalClipEnabled && (
-            <div style={{ marginLeft: "20px" }}>
+            <div className="slider-container">
               <input
                 type="range"
                 min="-2"
@@ -618,15 +575,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                 onChange={(e) =>
                   setVerticalClipPosition(parseFloat(e.target.value))
                 }
-                style={{ width: "100%" }}
+                className="slider-input"
               />
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "#c5c0c0ff",
-                  marginTop: "4px",
-                }}
-              >
+              <div className="slider-value">
                 Позиция: {verticalClipPosition.toFixed(2)}
               </div>
             </div>
@@ -634,38 +585,20 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
         </div>
 
         {/* Dimensions */}
-        <div
-          style={{
-            borderTop: "1px solid rgba(255,255,255,0.2)",
-            paddingTop: "15px",
-          }}
-        >
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "8px",
-              fontSize: "13px",
-            }}
-          >
+        <div className="control-section control-section--bordered">
+          <label className="control-label">
             <input
               type="checkbox"
               checked={dimensionsEnabled}
               onChange={(e) => setDimensionsEnabled(e.target.checked)}
-              style={{ marginRight: "8px", color: "black" }}
+              className="control-checkbox"
             />
             Показать размеры модели
           </label>
           {dimensionsEnabled && (
-            <div style={{ marginLeft: "20px" }}>
-              <div style={{ marginBottom: "8px" }}>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
+            <div className="dimensions-container">
+              <div className="dimensions-select-wrapper">
+                <label className="dimensions-select-label">
                   Единицы измерения:
                 </label>
                 <select
@@ -675,15 +608,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                       e.target.value as "mm" | "cm" | "m" | "in" | "ft"
                     )
                   }
-                  style={{
-                    width: "100%",
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    backgroundColor: "rgba(255,255,255,0.1)",
-                    color: "white",
-                    fontSize: "12px",
-                  }}
+                  className="dimensions-select"
                 >
                   <option value="mm">Миллиметры (мм)</option>
                   <option value="cm">Сантиметры (см)</option>
@@ -692,7 +617,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                   <option value="ft">Футы (ft)</option>
                 </select>
               </div>
-              <div style={{ fontSize: "11px", color: "#c5c0c0ff" }}>
+              <div className="dimensions-legend">
                 <div>🔴 Красный = Ширина (X)</div>
                 <div>🟢 Зелёный = Высота (Y)</div>
                 <div>🔵 Синий = Глубина (Z)</div>
