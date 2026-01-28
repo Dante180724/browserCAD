@@ -8,6 +8,7 @@ import {
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { VirtualFileSystem } from "../../utils/VirtualFileSystem";
 import "./style.css";
+import { Tabs, Card } from "@chakra-ui/react"
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -714,13 +715,21 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
   return (
     <div className="model-viewer-wrapper">
-      <div ref={containerRef} className="model-viewer" />
-
+      
+    <div ref={containerRef} className="model-viewer" />
+        <h3 className="controls-panel__title">Измерения</h3>
       {/* Clipping controls */}
-      <div className="controls-panel">
-        <h3 className="controls-panel__title">Разрезы модели</h3>
-
+      <Tabs.Root defaultValue="clippingPanels" variant="plain" className="controls-panel">
+        
         {/* Horizontal clipping */}
+      <Tabs.List bg="bg.muted" rounded="l3" p="1" className="controls-tabs">
+          <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
+          <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
+          <Tabs.Trigger value="distanceMeasurement">Измерение расстояния</Tabs.Trigger>
+        <Tabs.Indicator rounded="l2" />
+      </Tabs.List>
+
+      <Tabs.Content value="clippingPanels">  
         <div className="control-section">
           <label className="control-label">
             <input
@@ -781,8 +790,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             </div>
           )}
         </div>
+      </Tabs.Content>
 
-        {/* Dimensions */}
+      {/* Dimensions */}
+      <Tabs.Content value="dimensions">
         <div className="control-section control-section--bordered">
           <label className="control-label">
             <input
@@ -823,8 +834,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             </div>
           )}
         </div>
+      </Tabs.Content>
 
         {/* Distance Measurement */}
+      <Tabs.Content value="distanceMeasurement">
         <div className="control-section control-section--bordered">
           <label className="control-label">
             <input
@@ -876,7 +889,8 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </Tabs.Content>
+    </Tabs.Root>     
+  </div>
   );
 }

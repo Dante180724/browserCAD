@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ModelViewer } from "./components/ModelViewer";
 import { FileUpload } from "./components/FileUpload";
 import { VirtualFileSystem } from "./utils/VirtualFileSystem";
+import { Provider } from "./components/UI/provider"
 import "./App.scss";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
   };
 
   return (
+  <Provider>
     <div className="app">
       <header className="header">
         <h1>BrowserCAD</h1>
@@ -46,6 +48,7 @@ function App() {
         </div>
       </main>
     </div>
+  </Provider>
   );
 }
 
