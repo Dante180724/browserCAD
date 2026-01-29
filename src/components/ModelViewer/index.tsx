@@ -8,7 +8,7 @@ import {
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { VirtualFileSystem } from "../../utils/VirtualFileSystem";
 import "./style.css";
-import { Tabs, Card } from "@chakra-ui/react"
+import { Tabs, Card, Text } from "@chakra-ui/react"
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -717,12 +717,27 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     <div className="model-viewer-wrapper">
       
     <div ref={containerRef} className="model-viewer" />
-        <h3 className="controls-panel__title">Измерения</h3>
+    <Card.Root
+      bg="rgba(20, 23, 28, 0.75)"
+      color="gray.100"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      shadow="2xl"
+      backdropFilter="blur(12px)"
+      className="controls-panel"
+       >
+      <Card.Header borderBottom="1px solid" borderColor="whiteAlpha.200" className="controls-panel__title">
+        <Text fontSize="lg" fontWeight="semibold">
+          Измерения
+        </Text>
+      </Card.Header>
+
+      <Card.Body>
       {/* Clipping controls */}
-      <Tabs.Root defaultValue="clippingPanels" variant="plain" className="controls-panel">
+      <Tabs.Root defaultValue="clippingPanels" variant="plain">
         
         {/* Horizontal clipping */}
-      <Tabs.List bg="bg.muted" rounded="l3" p="1" className="controls-tabs">
+      <Tabs.List bg="bg.muted" rounded="l3" p="1" className="controls-section">
           <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
           <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
           <Tabs.Trigger value="distanceMeasurement">Измерение расстояния</Tabs.Trigger>
@@ -890,7 +905,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
           )}
         </div>
       </Tabs.Content>
-    </Tabs.Root>     
+    </Tabs.Root> 
+    </Card.Body>
+  </Card.Root>    
   </div>
   );
 }

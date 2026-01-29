@@ -22,25 +22,19 @@
   flex-direction: column;
   gap: 14px;
   padding: 12px;
-  /* Liquid glass start */
-  background: rgba(255, 255, 255, 0.21);
-  border-radius: 12px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(3.1px);
-  -webkit-backdrop-filter: blur(3.1px);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  /*Liquid glass end*/
   min-width: 250px;
   font-family: "Tektur", sans-serif;
   font-optical-sizing: auto;
   font-weight: 500;
   font-style: normal;
   font-variation-settings: "wdth" 100;
-
 }
 
 .controls-panel__title {
-  margin: 0 0 15px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
 }
@@ -48,6 +42,8 @@
 .control-section {
   margin-bottom: 15px;
 }
+
+
 
 .control-section--bordered {
   border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -57,7 +53,8 @@
 .control-label {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+  margin-top: 10px;
   margin-left: 2px;
   font-size: 13px;
 }
