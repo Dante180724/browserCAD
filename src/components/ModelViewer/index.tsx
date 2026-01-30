@@ -8,7 +8,17 @@ import {
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { VirtualFileSystem } from "../../utils/VirtualFileSystem";
 import "./style.css";
-import { Tabs, Card, Text } from "@chakra-ui/react"
+import {
+  Tabs,
+  Card,
+  Text,
+  HStack,
+  Slider,
+  useSlider,
+  Box,
+  Checkbox,
+  useCheckbox,
+} from "@chakra-ui/react";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -23,8 +33,8 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   const currentModelRef = useRef<THREE.Group | null>(null);
 
   // Clipping planes state
-  const [horizontalClipEnabled, setHorizontalClipEnabled] = useState(false);
-  const [verticalClipEnabled, setVerticalClipEnabled] = useState(false);
+  const horizontalClipEnabled = useCheckbox();
+  const verticalClipEnabled = useCheckbox();
   const [horizontalClipPosition, setHorizontalClipPosition] = useState(0);
   const [verticalClipPosition, setVerticalClipPosition] = useState(0);
   const horizontalPlaneRef = useRef<THREE.Plane | null>(null);
@@ -79,7 +89,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     if (distanceLabelRef.current) {
       if (distanceLabelRef.current.element?.parentNode) {
         distanceLabelRef.current.element.parentNode.removeChild(
-          distanceLabelRef.current.element
+          distanceLabelRef.current.element,
         );
       }
       scene.remove(distanceLabelRef.current);
@@ -111,7 +121,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     if (distanceLabelRef.current && sceneRef.current) {
       if (distanceLabelRef.current.element?.parentNode) {
         distanceLabelRef.current.element.parentNode.removeChild(
-          distanceLabelRef.current.element
+          distanceLabelRef.current.element,
         );
       }
       sceneRef.current.remove(distanceLabelRef.current);
@@ -122,13 +132,14 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   // Handle click for distance measurement
   const handleDistanceClick = (event: MouseEvent) => {
     if (!distanceMeasureEnabled) return;
-    if (!containerRef.current || !cameraRef.current || !sceneRef.current) return;
+    if (!containerRef.current || !cameraRef.current || !sceneRef.current)
+      return;
     if (!currentModelRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const mouse = new THREE.Vector2(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -((event.clientY - rect.top) / rect.height) * 2 + 1
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
     );
 
     const raycaster = new THREE.Raycaster();
@@ -216,7 +227,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       75,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
       0.01, // Near plane
-      10000 // Far plane - very large to ensure we can see everything
+      10000, // Far plane - very large to ensure we can see everything
     );
     camera.position.set(5, 5, 5);
     camera.lookAt(0, 0, 0);
@@ -289,7 +300,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     scene.add(markerA);
     markerARef.current = markerA;
 
-    const markerB = new THREE.Mesh(markerGeometry.clone(), markerMaterial.clone());
+    const markerB = new THREE.Mesh(
+      markerGeometry.clone(),
+      markerMaterial.clone(),
+    );
     markerB.visible = false;
     scene.add(markerB);
     markerBRef.current = markerB;
@@ -309,7 +323,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     // Horizontal plane (cuts along Y axis)
     horizontalPlaneRef.current = new THREE.Plane(
       new THREE.Vector3(0, -1, 0),
-      0
+      0,
     );
     // Vertical plane (cuts along Z axis)
     verticalPlaneRef.current = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
@@ -369,7 +383,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       }
       if (distanceLabelRef.current?.element?.parentNode) {
         distanceLabelRef.current.element.parentNode.removeChild(
-          distanceLabelRef.current.element
+          distanceLabelRef.current.element,
         );
       }
     };
@@ -408,7 +422,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
         // Get the base path from the model file
         const basePath = modelFile.path.substring(
           0,
-          modelFile.path.lastIndexOf("/") + 1
+          modelFile.path.lastIndexOf("/") + 1,
         );
 
         // Helper function to resolve path
@@ -522,7 +536,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
           if (shouldCleanupModelUrl) {
             URL.revokeObjectURL(modelBlobUrl);
           }
-        }
+        },
       );
     };
 
@@ -539,7 +553,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     end: THREE.Vector3,
     dimensionValue: number,
     axis: string,
-    color: number
+    color: number,
   ): THREE.Group => {
     const group = new THREE.Group();
 
@@ -558,7 +572,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       arrowLength,
       color,
       arrowLength * 0.6,
-      arrowLength * 0.4
+      arrowLength * 0.4,
     );
     group.add(arrowStart);
 
@@ -569,7 +583,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       arrowLength,
       color,
       arrowLength * 0.6,
-      arrowLength * 0.4
+      arrowLength * 0.4,
     );
     group.add(arrowEnd);
 
@@ -629,7 +643,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       // Clear all children
       while (dimensionsGroupRef.current.children.length > 0) {
         dimensionsGroupRef.current.remove(
-          dimensionsGroupRef.current.children[0]
+          dimensionsGroupRef.current.children[0],
         );
       }
 
@@ -694,10 +708,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
         materials.forEach((mat) => {
           const planes: THREE.Plane[] = [];
 
-          if (horizontalClipEnabled && horizontalPlaneRef.current) {
+          if (horizontalClipEnabled.checked && horizontalPlaneRef.current) {
             planes.push(horizontalPlaneRef.current);
           }
-          if (verticalClipEnabled && verticalPlaneRef.current) {
+          if (verticalClipEnabled.checked && verticalPlaneRef.current) {
             planes.push(verticalPlaneRef.current);
           }
 
@@ -707,207 +721,269 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       }
     });
   }, [
-    horizontalClipEnabled,
-    verticalClipEnabled,
+    horizontalClipEnabled.checked,
+    verticalClipEnabled.checked,
     horizontalClipPosition,
     verticalClipPosition,
   ]);
 
+  const horizontalSlider = useSlider({
+    defaultValue: [0],
+    thumbAlignment: "contain",
+    min: -2,
+    max: 3,
+    step: 0.0001,
+  });
+
+  const verticalSlider = useSlider({
+    defaultValue: [0],
+    thumbAlignment: "contain",
+    min: -2,
+    max: 3,
+    step: 0.0001,
+  });
+
+  useEffect(() => {
+    setHorizontalClipPosition(horizontalSlider.value[0]);
+  }, [horizontalSlider.value]);
+
+  useEffect(() => {
+    setVerticalClipPosition(verticalSlider.value[0]);
+  }, [verticalSlider.value]);
+
   return (
     <div className="model-viewer-wrapper">
-      
-    <div ref={containerRef} className="model-viewer" />
-    <Card.Root
-      bg="rgba(20, 23, 28, 0.75)"
-      color="gray.100"
-      border="1px solid"
-      borderColor="whiteAlpha.200"
-      shadow="2xl"
-      backdropFilter="blur(12px)"
-      className="controls-panel"
-       >
-      <Card.Header borderBottom="1px solid" borderColor="whiteAlpha.200" className="controls-panel__title">
-        <Text fontSize="lg" fontWeight="semibold">
-          Измерения
-        </Text>
-      </Card.Header>
+      <div ref={containerRef} className="model-viewer" />
+      <Card.Root
+        bg="rgba(20, 23, 28, 0.75)"
+        color="gray.100"
+        border="1px solid"
+        borderColor="whiteAlpha.200"
+        shadow="2xl"
+        backdropFilter="blur(12px)"
+        className="controls-panel"
+      >
+        <Card.Header
+          borderBottom="1px solid"
+          borderColor="whiteAlpha.200"
+          className="controls-panel__title"
+        >
+          <Text fontSize="lg" fontWeight="semibold">
+            Измерения
+          </Text>
+        </Card.Header>
 
-      <Card.Body>
-      {/* Clipping controls */}
-      <Tabs.Root defaultValue="clippingPanels" variant="plain">
-        
-        {/* Horizontal clipping */}
-      <Tabs.List bg="bg.muted" rounded="l3" p="1" className="controls-section">
-          <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
-          <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
-          <Tabs.Trigger value="distanceMeasurement">Измерение расстояния</Tabs.Trigger>
-        <Tabs.Indicator rounded="l2" />
-      </Tabs.List>
+        <Card.Body>
+          {/* Clipping controls */}
+          <Tabs.Root defaultValue="clippingPanels" variant="plain">
+            {/* Horizontal clipping */}
+            <Tabs.List bg="bg.muted" gap="2px" rounded="l3" p="1" mb="15px">
+              <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
+              <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
+              <Tabs.Trigger value="distanceMeasurement">
+                Измерение расстояния
+              </Tabs.Trigger>
+              <Tabs.Indicator rounded="l2" />
+            </Tabs.List>
 
-      <Tabs.Content value="clippingPanels">  
-        <div className="control-section">
-          <label className="control-label">
-            <input
+            <Tabs.Content value="clippingPanels">
+              <div className="control-section">
+                <label className="control-label">
+                  {/* <input
               type="checkbox"
               checked={horizontalClipEnabled}
               onChange={(e) => setHorizontalClipEnabled(e.target.checked)}
               className="control-checkbox"
-            />
-            Горизонтальный разрез
-          </label>
-          {horizontalClipEnabled && (
-            <div className="slider-container">
-              <input
-                type="range"
-                min="-2"
-                max="2"
-                step="0.01"
-                value={horizontalClipPosition}
-                onChange={(e) =>
-                  setHorizontalClipPosition(parseFloat(e.target.value))
-                }
-                className="slider-input"
-              />
-              <div className="slider-value">
-                Позиция: {horizontalClipPosition.toFixed(2)}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Vertical clipping */}
-        <div className="control-section">
-          <label className="control-label">
-            <input
-              type="checkbox"
-              checked={verticalClipEnabled}
-              onChange={(e) => setVerticalClipEnabled(e.target.checked)}
-              className="control-checkbox"
-            />
-            Вертикальный разрез
-          </label>
-          {verticalClipEnabled && (
-            <div className="slider-container">
-              <input
-                type="range"
-                min="-2"
-                max="2"
-                step="0.01"
-                value={verticalClipPosition}
-                onChange={(e) =>
-                  setVerticalClipPosition(parseFloat(e.target.value))
-                }
-                className="slider-input"
-              />
-              <div className="slider-value">
-                Позиция: {verticalClipPosition.toFixed(2)}
-              </div>
-            </div>
-          )}
-        </div>
-      </Tabs.Content>
-
-      {/* Dimensions */}
-      <Tabs.Content value="dimensions">
-        <div className="control-section control-section--bordered">
-          <label className="control-label">
-            <input
-              type="checkbox"
-              checked={dimensionsEnabled}
-              onChange={(e) => setDimensionsEnabled(e.target.checked)}
-              className="control-checkbox"
-            />
-            Показать размеры модели
-          </label>
-          {dimensionsEnabled && (
-            <div className="dimensions-container">
-              <div className="dimensions-select-wrapper">
-                <label className="dimensions-select-label">
-                  Единицы измерения:
+            /> */}
+                  <Checkbox.RootProvider
+                    value={horizontalClipEnabled}
+                    onChange={() => {
+                      horizontalClipEnabled.setChecked(
+                        !horizontalClipEnabled.checked,
+                      );
+                    }}
+                  >
+                    <Checkbox.Root>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
+                    </Checkbox.Root>
+                  </Checkbox.RootProvider>
                 </label>
-                <select
-                  value={dimensionUnit}
-                  onChange={(e) =>
-                    setDimensionUnit(
-                      e.target.value as "mm" | "cm" | "m" | "in" | "ft"
-                    )
-                  }
-                  className="dimensions-select"
-                >
-                  <option value="mm">Миллиметры (мм)</option>
-                  <option value="cm">Сантиметры (см)</option>
-                  <option value="m">Метры (м)</option>
-                  <option value="in">Дюймы (in)</option>
-                  <option value="ft">Футы (ft)</option>
-                </select>
+                {horizontalClipEnabled.checked && (
+                  <Box>
+                    <Slider.RootProvider value={horizontalSlider} width="450px">
+                      <Slider.Control>
+                        <Slider.Track>
+                          <Slider.Range />
+                        </Slider.Track>
+                        <Slider.Thumbs />
+                      </Slider.Control>
+                    </Slider.RootProvider>
+                    <Text fontSize="11px">
+                      Позиция: {horizontalSlider.value}
+                    </Text>
+                  </Box>
+                  // <div className="slider-container">
+                  //   <input
+                  //     type="range"
+                  //     min="-2"
+                  //     max="2"
+                  //     step="0.01"
+                  //     value={horizontalClipPosition}
+                  //     onChange={(e) =>
+                  //       setHorizontalClipPosition(parseFloat(e.target.value))
+                  //     }
+                  //     className="slider-input"
+                  //   />
+                  //   <div className="slider-value">
+                  //     Позиция: {horizontalClipPosition.toFixed(2)}
+                  //   </div>
+                  // </div>
+                )}
               </div>
-              <div className="dimensions-legend">
-                <div>🔴 Красный = Ширина (X)</div>
-                <div>🟢 Зелёный = Высота (Y)</div>
-                <div>🔵 Синий = Глубина (Z)</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Tabs.Content>
 
-        {/* Distance Measurement */}
-      <Tabs.Content value="distanceMeasurement">
-        <div className="control-section control-section--bordered">
-          <label className="control-label">
-            <input
-              type="checkbox"
-              checked={distanceMeasureEnabled}
-              onChange={(e) => setDistanceMeasureEnabled(e.target.checked)}
-              className="control-checkbox"
-            />
-            Измерение расстояния
-          </label>
-          {distanceMeasureEnabled && (
-            <div className="distance-container">
-              <div className="distance-instructions">
-                Кликните на две точки модели для измерения расстояния между ними
-              </div>
-              <div className="dimensions-select-wrapper">
-                <label className="dimensions-select-label">
-                  Единицы измерения:
+              {/* Vertical clipping */}
+              <div className="control-section">
+                <label className="control-label">
+                  <Checkbox.RootProvider
+                    value={verticalClipEnabled}
+                    onChange={() => {
+                      verticalClipEnabled.setChecked(
+                        !verticalClipEnabled.checked,
+                      );
+                    }}
+                  >
+                    <Checkbox.Root>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
+                    </Checkbox.Root>
+                  </Checkbox.RootProvider>
                 </label>
-                <select
-                  value={dimensionUnit}
-                  onChange={(e) =>
-                    setDimensionUnit(
-                      e.target.value as "mm" | "cm" | "m" | "in" | "ft"
-                    )
-                  }
-                  className="dimensions-select"
-                >
-                  <option value="mm">Миллиметры (мм)</option>
-                  <option value="cm">Сантиметры (см)</option>
-                  <option value="m">Метры (м)</option>
-                  <option value="in">Дюймы (in)</option>
-                  <option value="ft">Футы (ft)</option>
-                </select>
+                {verticalClipEnabled.checked && (
+                  <Box>
+                    <Slider.RootProvider value={verticalSlider} width="450px">
+                      <Slider.Control>
+                        <Slider.Track>
+                          <Slider.Range />
+                        </Slider.Track>
+                        <Slider.Thumbs />
+                      </Slider.Control>
+                    </Slider.RootProvider>
+                    <Text fontSize="11px">Позиция: {verticalSlider.value}</Text>
+                  </Box>
+                )}
               </div>
-              {measuredDistance !== null && (
-                <div className="distance-result">
-                  <strong>Расстояние:</strong>{" "}
-                  {(measuredDistance * unitConversions[dimensionUnit].factor).toFixed(2)}{" "}
-                  {unitConversions[dimensionUnit].label}
-                </div>
-              )}
-              <button
-                className="distance-reset-btn"
-                onClick={resetDistanceMeasurement}
-              >
-                Сбросить измерение
-              </button>
-            </div>
-          )}
-        </div>
-      </Tabs.Content>
-    </Tabs.Root> 
-    </Card.Body>
-  </Card.Root>    
-  </div>
+            </Tabs.Content>
+
+            {/* Dimensions */}
+            <Tabs.Content value="dimensions">
+              <div className="control-section control-section--bordered">
+                <label className="control-label">
+                  <input
+                    type="checkbox"
+                    checked={dimensionsEnabled}
+                    onChange={(e) => setDimensionsEnabled(e.target.checked)}
+                    className="control-checkbox"
+                  />
+                  Показать размеры модели
+                </label>
+                {dimensionsEnabled && (
+                  <div className="dimensions-container">
+                    <div className="dimensions-select-wrapper">
+                      <label className="dimensions-select-label">
+                        Единицы измерения:
+                      </label>
+                      <select
+                        value={dimensionUnit}
+                        onChange={(e) =>
+                          setDimensionUnit(
+                            e.target.value as "mm" | "cm" | "m" | "in" | "ft",
+                          )
+                        }
+                        className="dimensions-select"
+                      >
+                        <option value="mm">Миллиметры (мм)</option>
+                        <option value="cm">Сантиметры (см)</option>
+                        <option value="m">Метры (м)</option>
+                        <option value="in">Дюймы (in)</option>
+                        <option value="ft">Футы (ft)</option>
+                      </select>
+                    </div>
+                    <div className="dimensions-legend">
+                      <div>🔴 Красный = Ширина (X)</div>
+                      <div>🟢 Зелёный = Высота (Y)</div>
+                      <div>🔵 Синий = Глубина (Z)</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Tabs.Content>
+
+            {/* Distance Measurement */}
+            <Tabs.Content value="distanceMeasurement">
+              <div className="control-section control-section--bordered">
+                <label className="control-label">
+                  <input
+                    type="checkbox"
+                    checked={distanceMeasureEnabled}
+                    onChange={(e) =>
+                      setDistanceMeasureEnabled(e.target.checked)
+                    }
+                    className="control-checkbox"
+                  />
+                  Измерение расстояния
+                </label>
+                {distanceMeasureEnabled && (
+                  <div className="distance-container">
+                    <div className="distance-instructions">
+                      Кликните на две точки модели для измерения расстояния
+                      между ними
+                    </div>
+                    <div className="dimensions-select-wrapper">
+                      <label className="dimensions-select-label">
+                        Единицы измерения:
+                      </label>
+                      <select
+                        value={dimensionUnit}
+                        onChange={(e) =>
+                          setDimensionUnit(
+                            e.target.value as "mm" | "cm" | "m" | "in" | "ft",
+                          )
+                        }
+                        className="dimensions-select"
+                      >
+                        <option value="mm">Миллиметры (мм)</option>
+                        <option value="cm">Сантиметры (см)</option>
+                        <option value="m">Метры (м)</option>
+                        <option value="in">Дюймы (in)</option>
+                        <option value="ft">Футы (ft)</option>
+                      </select>
+                    </div>
+                    {measuredDistance !== null && (
+                      <div className="distance-result">
+                        <strong>Расстояние:</strong>{" "}
+                        {(
+                          measuredDistance *
+                          unitConversions[dimensionUnit].factor
+                        ).toFixed(2)}{" "}
+                        {unitConversions[dimensionUnit].label}
+                      </div>
+                    )}
+                    <button
+                      className="distance-reset-btn"
+                      onClick={resetDistanceMeasurement}
+                    >
+                      Сбросить измерение
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Tabs.Content>
+          </Tabs.Root>
+        </Card.Body>
+      </Card.Root>
+    </div>
   );
 }

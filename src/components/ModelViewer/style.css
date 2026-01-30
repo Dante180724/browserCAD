@@ -39,11 +39,6 @@
   font-weight: 600;
 }
 
-.control-section {
-  margin-bottom: 15px;
-}
-
-
 
 .control-section--bordered {
   border-top: 1px solid rgba(255, 255, 255, 0.2);
