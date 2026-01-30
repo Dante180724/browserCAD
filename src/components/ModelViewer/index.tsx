@@ -789,12 +789,6 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             <Tabs.Content value="clippingPanels">
               <div className="control-section">
                 <label className="control-label">
-                  {/* <input
-              type="checkbox"
-              checked={horizontalClipEnabled}
-              onChange={(e) => setHorizontalClipEnabled(e.target.checked)}
-              className="control-checkbox"
-            /> */}
                   <Checkbox.RootProvider
                     value={horizontalClipEnabled}
                     onChange={() => {
@@ -817,29 +811,15 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumbs />
+                        <Slider.Thumb index={0}>
+                          <Slider.HiddenInput />
+                        </Slider.Thumb>
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">
                       Позиция: {horizontalSlider.value}
                     </Text>
                   </Box>
-                  // <div className="slider-container">
-                  //   <input
-                  //     type="range"
-                  //     min="-2"
-                  //     max="2"
-                  //     step="0.01"
-                  //     value={horizontalClipPosition}
-                  //     onChange={(e) =>
-                  //       setHorizontalClipPosition(parseFloat(e.target.value))
-                  //     }
-                  //     className="slider-input"
-                  //   />
-                  //   <div className="slider-value">
-                  //     Позиция: {horizontalClipPosition.toFixed(2)}
-                  //   </div>
-                  // </div>
                 )}
               </div>
 
@@ -868,7 +848,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumbs />
+                        <Slider.Thumb index={0}>
+                          <Slider.HiddenInput />
+                        </Slider.Thumb>
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">Позиция: {verticalSlider.value}</Text>
