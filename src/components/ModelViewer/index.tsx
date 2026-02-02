@@ -811,9 +811,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumb index={0}>
+                        <Slider.Thumbs />
+                        {/* <Slider.Thumb index={0}>
                           <Slider.HiddenInput />
-                        </Slider.Thumb>
+                        </Slider.Thumb> */}
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">
@@ -848,9 +849,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumb index={0}>
+                        <Slider.Thumbs />
+                        {/* <Slider.Thumb index={0}>
                           <Slider.HiddenInput />
-                        </Slider.Thumb>
+                        </Slider.Thumb> */}
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">Позиция: {verticalSlider.value}</Text>
