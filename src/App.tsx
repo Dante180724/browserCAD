@@ -2,8 +2,9 @@ import { useState } from "react";
 import { ModelViewer } from "./components/ModelViewer";
 import { FileUpload } from "./components/FileUpload";
 import { VirtualFileSystem } from "./utils/VirtualFileSystem";
-import { Provider } from "./components/UI/provider"
+import { Provider } from "./components/UI/provider";
 import "./App.scss";
+import ViewerBackground from "./components/UI/ViewerBackground";
 
 function App() {
   const [fileSystem, setFileSystem] = useState<VirtualFileSystem | null>(null);
@@ -27,28 +28,33 @@ function App() {
   };
 
   return (
-  <Provider>
-    <div className="app">
-      <header className="header">
-        <h1>BrowserCAD</h1>
-        <p>Просмотр 3D моделей в браузере</p>
-      </header>
-      <main className="content">
-        <div className="viewer-container">
-          {fileSystem ? (
-            <>
-              <ModelViewer fileSystem={fileSystem} />
-              <div className="controls">
-                <button onClick={handleReset}>Загрузить другую модель</button>
-              </div>
-            </>
-          ) : (
-            <FileUpload onFilesSelect={handleFilesSelect} />
-          )}
+    <Provider>
+      <div className="bg">
+        <ViewerBackground />
+        <div className="app">
+          <header className="header">
+            <h1>BrowserCAD</h1>
+            <p>Просмотр 3D моделей в браузере</p>
+          </header>
+          <main className="content">
+            <div className="viewer-container">
+              {fileSystem ? (
+                <>
+                  <ModelViewer fileSystem={fileSystem} />
+                  <div className="controls">
+                    <button onClick={handleReset}>
+                      Загрузить другую модель
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <FileUpload onFilesSelect={handleFilesSelect} />
+              )}
+            </div>
+          </main>
         </div>
-      </main>
-    </div>
-  </Provider>
+      </div>
+    </Provider>
   );
 }
 
