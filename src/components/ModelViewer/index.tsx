@@ -18,6 +18,7 @@ import {
   Box,
   Checkbox,
   useCheckbox,
+  CheckboxRootProvider,
 } from "@chakra-ui/react";
 
 interface ModelViewerProps {
@@ -723,6 +724,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   }, [
     horizontalClipEnabled.checked,
     verticalClipEnabled.checked,
+
     horizontalClipPosition,
     verticalClipPosition,
   ]);
@@ -811,10 +813,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumbs />
-                        {/* <Slider.Thumb index={0}>
+                        <Slider.Thumb index={0}>
                           <Slider.HiddenInput />
-                        </Slider.Thumb> */}
+                        </Slider.Thumb>
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">
@@ -849,10 +850,9 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <Slider.Track>
                           <Slider.Range />
                         </Slider.Track>
-                        <Slider.Thumbs />
-                        {/* <Slider.Thumb index={0}>
+                        <Slider.Thumb index={0}>
                           <Slider.HiddenInput />
-                        </Slider.Thumb> */}
+                        </Slider.Thumb>
                       </Slider.Control>
                     </Slider.RootProvider>
                     <Text fontSize="11px">Позиция: {verticalSlider.value}</Text>
@@ -865,13 +865,16 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             <Tabs.Content value="dimensions">
               <div className="control-section control-section--bordered">
                 <label className="control-label">
-                  <input
-                    type="checkbox"
+                  <Checkbox.Root
                     checked={dimensionsEnabled}
-                    onChange={(e) => setDimensionsEnabled(e.target.checked)}
-                    className="control-checkbox"
-                  />
-                  Показать размеры модели
+                    onCheckedChange={(e) => setDimensionsEnabled(!!e.checked)}
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <Checkbox.Label> Показать размеры модели</Checkbox.Label>
+                  </Checkbox.Root>
                 </label>
                 {dimensionsEnabled && (
                   <div className="dimensions-container">
@@ -909,15 +912,26 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             <Tabs.Content value="distanceMeasurement">
               <div className="control-section control-section--bordered">
                 <label className="control-label">
-                  <input
+                  {/* <input
                     type="checkbox"
                     checked={distanceMeasureEnabled}
                     onChange={(e) =>
                       setDistanceMeasureEnabled(e.target.checked)
                     }
                     className="control-checkbox"
-                  />
-                  Измерение расстояния
+                  /> */}
+                  <Checkbox.Root
+                    checked={distanceMeasureEnabled}
+                    onCheckedChange={(e) =>
+                      setDistanceMeasureEnabled(!!e.checked)
+                    }
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <Checkbox.Label> Измерение расстояния</Checkbox.Label>
+                  </Checkbox.Root>
                 </label>
                 {distanceMeasureEnabled && (
                   <div className="distance-container">
