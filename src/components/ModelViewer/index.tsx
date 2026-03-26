@@ -19,7 +19,11 @@ import {
   Checkbox,
   useCheckbox,
   CheckboxRootProvider,
+  Select,
+  createListCollection,
+  Portal,
 } from "@chakra-ui/react";
+import { Value } from "three/examples/jsm/inspector/ui/Values.js";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -71,6 +75,15 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     in: { factor: 39.3701, label: "дюйм" },
     ft: { factor: 3.28084, label: "фут" },
   };
+
+  console.log(unitConversions);
+
+  const unitsCollection = createListCollection({
+    items: Object.entries(unitConversions).map(([value, data]) => ({
+      value,
+      label: data.label,
+    })),
+  });
 
   // Update distance line between two points
   const updateDistanceLine = (pointA: THREE.Vector3, pointB: THREE.Vector3) => {
@@ -878,7 +891,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                 </label>
                 {dimensionsEnabled && (
                   <div className="dimensions-container">
-                    <div className="dimensions-select-wrapper">
+                    {/* <div className="dimensions-select-wrapper">
                       <label className="dimensions-select-label">
                         Единицы измерения:
                       </label>
@@ -897,7 +910,60 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
                         <option value="in">Дюймы (in)</option>
                         <option value="ft">Футы (ft)</option>
                       </select>
-                    </div>
+                    </div> */}
+
+                    <Select.Root
+                      collection={unitsCollection}
+                      value={[dimensionUnit]}
+                      variant="subtle"
+                      onValueChange={(e) =>
+                        setDimensionUnit(e.value[0] as typeof dimensionUnit)
+                      }
+                      size="xs"
+                      width="320px"
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Label>Выберите ед.измерения</Select.Label>
+                      <Select.Control>
+                        <Select.Trigger
+                          bg="rgba(255, 255, 255, 0.06)"
+                          backdropFilter="blur(10px)"
+                          border="1px solid"
+                          borderColor="whiteAlpha.200"
+                          _hover={{ bg: "rgba(255,255,255,0.12)" }}
+                          _expanded={{ bg: "rgba(255,255,255,0.16)" }}
+                        >
+                          <Select.ValueText placeholder="Выберите ед.измерения" />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Portal>
+                        <Select.Positioner>
+                          <Select.Content
+                            bg="rgba(120, 120, 120, 0.12)"
+                            backdropFilter="blur(60px)"
+                            border="1px solid"
+                            borderColor="rgba(200, 200, 200, 0.25)"
+                            boxShadow="0 8px 32px rgba(0,0,0,0.25)"
+                            color="gray.100"
+                          >
+                            {unitsCollection.items.map((unit) => (
+                              <Select.Item
+                                item={unit}
+                                key={unit.value}
+                                _hover={{ bg: "rgba(255,255,255,0.1)" }}
+                              >
+                                {unit.label}
+
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Portal>
+                    </Select.Root>
                     <div className="dimensions-legend">
                       <div>🔴 Красный = Ширина (X)</div>
                       <div>🟢 Зелёный = Высота (Y)</div>
@@ -912,14 +978,6 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             <Tabs.Content value="distanceMeasurement">
               <div className="control-section control-section--bordered">
                 <label className="control-label">
-                  {/* <input
-                    type="checkbox"
-                    checked={distanceMeasureEnabled}
-                    onChange={(e) =>
-                      setDistanceMeasureEnabled(e.target.checked)
-                    }
-                    className="control-checkbox"
-                  /> */}
                   <Checkbox.Root
                     checked={distanceMeasureEnabled}
                     onCheckedChange={(e) =>
