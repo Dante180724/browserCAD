@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState } from "react";
+import { ImDownload } from "react-icons/im";
+import { Icon, Box, Button } from "@chakra-ui/react";
 
 interface FileUploadProps {
   onFilesSelect: (files: File[]) => void;
@@ -14,13 +16,13 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
 
     // Check if there's at least one .gltf or .glb file
     const hasModelFile = fileArray.some(
-      f => f.name.endsWith('.gltf') || f.name.endsWith('.glb')
+      (f) => f.name.endsWith(".gltf") || f.name.endsWith(".glb"),
     );
 
     if (hasModelFile) {
       onFilesSelect(fileArray);
     } else {
-      alert('Пожалуйста, выберите папку с .gltf или .glb файлом');
+      alert("Пожалуйста, выберите папку с .gltf или .glb файлом");
     }
   };
 
@@ -51,7 +53,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      if (item.kind === 'file') {
+      if (item.kind === "file") {
         const entry = item.webkitGetAsEntry();
 
         if (entry) {
@@ -74,7 +76,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
 
   const processDirectory = async (
     directory: FileSystemDirectoryEntry,
-    files: File[]
+    files: File[],
   ): Promise<void> => {
     const reader = directory.createReader();
 
@@ -97,7 +99,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
     return new Promise((resolve) => {
       fileEntry.file(
         (file) => resolve(file),
-        () => resolve(null)
+        () => resolve(null),
       );
     });
   };
@@ -114,7 +116,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
 
   return (
     <div
-      className={`file-upload ${isDragging ? 'dragging' : ''}`}
+      className={`file-upload ${isDragging ? "dragging" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -124,7 +126,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
         type="file"
         accept=".gltf,.glb"
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
       <input
         ref={folderInputRef}
@@ -134,34 +136,77 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
         directory=""
         multiple
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
-      <div className="upload-icon">
-        <svg
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-      </div>
+      <Box role="group">
+        <Icon
+          as={ImDownload}
+          boxSize="80px"
+          color="#5A7FAF"
+          opacity={0.9}
+          mb="8"
+          transition="transform 0.3s"
+          _hover={{ transform: "translateY(-8px)", opacity: 1 }}
+        />
+      </Box>
       <h3>Загрузите 3D модель</h3>
       <p>Перетащите папку с моделью сюда или выберите:</p>
-      <div className="upload-buttons">
-        <button onClick={handleFolderClick} className="upload-btn">
+      <Box
+        display="flex"
+        gap="1rem"
+        flexWrap="wrap"
+        justifyContent="center"
+        width="100%"
+      >
+        <Button
+          size="2xl"
+          px="20px"
+          py="10px"
+          bg="#5A7FAF"
+          color="white"
+          borderRadius="12px"
+          fontSize="0.95rem"
+          fontWeight="500"
+          boxShadow="0 4px 12px rgba(0,0,0,0.25)"
+          transition="all 0.2s"
+          _hover={{
+            bg: "#6B90BF",
+            transform: "translateY(-2px)",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
+          }}
+          _active={{
+            transform: "translateY(0)",
+          }}
+          onClick={handleFolderClick}
+        >
           Выбрать папку
-        </button>
-        <button onClick={handleFileClick} className="upload-btn secondary">
+        </Button>
+
+        <Button
+          size="2xl"
+          px="20px"
+          py="10px"
+          bg="rgba(120,120,120,0.12)"
+          backdropFilter="blur(1px)"
+          border="1px solid"
+          borderColor="#5A7FAF"
+          color="#5A7FAF"
+          borderRadius="12px"
+          fontSize="0.95rem"
+          fontWeight="600"
+          transition="all 0.2s"
+          _hover={{
+            bg: "rgba(120,120,120,0.18)",
+            borderColor: "whiteAlpha.300",
+          }}
+          _active={{
+            bg: "rgba(120,120,120,0.22)",
+          }}
+          onClick={handleFileClick}
+        >
           Один .glb файл
-        </button>
-      </div>
+        </Button>
+      </Box>
     </div>
   );
 }

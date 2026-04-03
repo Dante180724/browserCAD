@@ -5,6 +5,7 @@ import { VirtualFileSystem } from "./utils/VirtualFileSystem";
 import { Provider } from "./components/UI/provider";
 import "./App.scss";
 import ViewerBackground from "./components/UI/ViewerBackground";
+import { Button } from "@chakra-ui/react";
 
 function App() {
   const [fileSystem, setFileSystem] = useState<VirtualFileSystem | null>(null);
@@ -42,9 +43,29 @@ function App() {
                 <>
                   <ModelViewer fileSystem={fileSystem} />
                   <div className="controls">
-                    <button onClick={handleReset}>
+                    <Button
+                      bg="#5A7FAF"
+                      color="white"
+                      px="1.5rem"
+                      py="0.75rem"
+                      border="none"
+                      borderRadius="12px"
+                      fontSize="0.875rem"
+                      fontWeight="500"
+                      boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+                      transition="all 0.2s ease"
+                      _hover={{
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 6px 16px rgba(0, 0, 0, 0.15)",
+                        bg: "#6B90BF",
+                      }}
+                      _active={{
+                        transform: "translateY(0)",
+                      }}
+                      onClick={handleReset}
+                    >
                       Загрузить другую модель
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : (

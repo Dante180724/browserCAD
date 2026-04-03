@@ -102,22 +102,6 @@
   color: #fff;
 }
 
-.distance-reset-btn {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  color: white;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.distance-reset-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
 /* Distance label in 3D scene */
 .distance-label {
   color: #ff5555;
