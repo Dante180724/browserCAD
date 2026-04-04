@@ -254,7 +254,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     const canvasHeight = containerRef.current.clientHeight;
 
     renderer.setSize(canvasWidth, canvasHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.localClippingEnabled = true; // Enable clipping planes
@@ -275,6 +275,30 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     labelRenderer.domElement.style.pointerEvents = "none";
     containerRef.current.appendChild(labelRenderer.domElement);
     labelRendererRef.current = labelRenderer;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (
+        !containerRef.current ||
+        !cameraRef.current ||
+        !rendererRef.current ||
+        !labelRendererRef.current
+      )
+        return;
+
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+
+      cameraRef.current.aspect = width / height;
+      cameraRef.current.updateProjectionMatrix();
+
+      rendererRef.current.setSize(width, height);
+
+      rendererRef.current.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      labelRendererRef.current.setSize(width, height);
+    });
+
+    resizeObserver.observe(containerRef.current);
 
     // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -401,6 +425,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
           distanceLabelRef.current.element,
         );
       }
+      resizeObserver.disconnect();
     };
   }, []);
 

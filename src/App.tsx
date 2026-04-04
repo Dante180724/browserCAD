@@ -5,7 +5,10 @@ import { VirtualFileSystem } from "./utils/VirtualFileSystem";
 import { Provider } from "./components/UI/provider";
 import "./App.scss";
 import ViewerBackground from "./components/UI/ViewerBackground";
-import { Button } from "@chakra-ui/react";
+import { Button, Box } from "@chakra-ui/react";
+import { motion } from "framer-motion";
+
+const MotionBox = motion(Box);
 
 function App() {
   const [fileSystem, setFileSystem] = useState<VirtualFileSystem | null>(null);
@@ -38,11 +41,35 @@ function App() {
             <p>Просмотр 3D моделей в браузере</p>
           </header>
           <main className="content">
-            <div className="viewer-container">
+            {/* <div className="viewer-container"> */}
+            <MotionBox
+              layout
+              initial={false}
+              animate={{
+                width: fileSystem ? "100%" : "460px",
+                height: fileSystem ? "100%" : "420px",
+                scale: fileSystem ? 1 : 0.95,
+                opacity: fileSystem ? 1 : 0.9,
+              }}
+              transition={{
+                duration: 0.35,
+                ease: [0.4, 0, 0.2, 1],
+              }}
+              maxW="1200px"
+              maxH="800px"
+              bg="white"
+              borderRadius={fileSystem ? "24px" : "20px"}
+              boxShadow="0 20px 60px rgba(0,0,0,0.3)"
+              overflow="hidden"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              position="relative"
+            >
               {fileSystem ? (
                 <>
                   <ModelViewer fileSystem={fileSystem} />
-                  <div className="controls">
+                  <Box position="absolute" top="1.5rem" right="1.5rem">
                     <Button
                       bg="#5A7FAF"
                       color="white"
@@ -66,12 +93,12 @@ function App() {
                     >
                       Загрузить другую модель
                     </Button>
-                  </div>
+                  </Box>
                 </>
               ) : (
                 <FileUpload onFilesSelect={handleFilesSelect} />
               )}
-            </div>
+            </MotionBox>
           </main>
         </div>
       </div>
