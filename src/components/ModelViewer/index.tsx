@@ -19,11 +19,9 @@ import {
   Box,
   Checkbox,
   useCheckbox,
-  CheckboxRootProvider,
   Select,
   createListCollection,
   Portal,
-  TabsContent,
 } from "@chakra-ui/react";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
