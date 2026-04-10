@@ -23,8 +23,9 @@ import {
   Select,
   createListCollection,
   Portal,
+  TabsContent,
 } from "@chakra-ui/react";
-import { Value } from "three/examples/jsm/inspector/ui/Values.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
@@ -37,6 +38,12 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const currentModelRef = useRef<THREE.Group | null>(null);
+
+  //Transform module state
+  const [transformMode, setTransformMode] = useState<
+    "translate" | "rotate" | "scale"
+  >("translate");
+  const [transformEnabled, setTransformEnabled] = useState(false);
 
   // Clipping planes state
   const horizontalClipEnabled = useCheckbox();
@@ -66,6 +73,12 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   const markerBRef = useRef<THREE.Mesh | null>(null);
   const distanceLineRef = useRef<THREE.Line | null>(null);
   const distanceLabelRef = useRef<CSS2DObject | null>(null);
+  const transformControlsRef = useRef<TransformControls | null>(null);
+  const initialTransformRef = useRef<{
+    position: THREE.Vector3;
+    quaternion: THREE.Quaternion;
+    scale: THREE.Vector3;
+  } | null>(null);
 
   // Unit conversion factors (from Three.js units to target unit)
   // Assuming Three.js units are in meters by default
@@ -141,6 +154,26 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       }
       sceneRef.current.remove(distanceLabelRef.current);
       distanceLabelRef.current = null;
+    }
+  };
+
+  const resetGeometryTransform = () => {
+    if (!currentModelRef.current || !initialTransformRef.current) return;
+
+    const model = currentModelRef.current;
+    const initial = initialTransformRef.current;
+
+    model.position.copy(initial.position);
+    model.quaternion.copy(initial.quaternion);
+    model.scale.copy(initial.scale);
+
+    model.updateMatrixWorld(true);
+
+    setTransformMode("translate");
+    setTransformEnabled(false);
+
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
     }
   };
 
@@ -302,6 +335,21 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
     // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
+
+    const transformControls = new TransformControls(
+      camera,
+      renderer.domElement,
+    );
+
+    // Отключаем OrbitControls при трансформации
+    transformControls.addEventListener("dragging-changed", (event) => {
+      if (controlsRef.current) {
+        controlsRef.current.enabled = !event.value;
+      }
+    });
+
+    scene.add(transformControls.getHelper());
+    transformControlsRef.current = transformControls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = true;
@@ -430,12 +478,18 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
   }, []);
 
   useEffect(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
+    }
     if (!fileSystem || !sceneRef.current) return;
 
     let cancelled = false;
 
     // Remove previous model
     if (currentModelRef.current) {
+      if (transformControlsRef.current) {
+        transformControlsRef.current.detach();
+      }
       sceneRef.current.remove(currentModelRef.current);
       currentModelRef.current = null;
     }
@@ -552,6 +606,15 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
           sceneRef.current?.add(model);
           currentModelRef.current = model;
+
+          initialTransformRef.current = {
+            position: model.position.clone(),
+            quaternion: model.quaternion.clone(),
+            scale: model.scale.clone(),
+          };
+          if (transformControlsRef.current) {
+            transformControlsRef.current.detach();
+          }
 
           // Reset camera and controls to look at the model
           if (cameraRef.current && controlsRef.current) {
@@ -792,6 +855,24 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     setVerticalClipPosition(verticalSlider.value[0]);
   }, [verticalSlider.value]);
 
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.setMode(transformMode);
+    }
+  }, [transformMode]);
+
+  useEffect(() => {
+    if (!transformControlsRef.current) return;
+
+    if (transformEnabled) {
+      if (currentModelRef.current) {
+        transformControlsRef.current.attach(currentModelRef.current);
+      }
+    } else {
+      transformControlsRef.current.detach();
+    }
+  }, [transformEnabled]);
+
   return (
     <div className="model-viewer-wrapper">
       <div ref={containerRef} className="model-viewer" />
@@ -816,9 +897,10 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
         <Card.Body>
           {/* Clipping controls */}
-          <Tabs.Root defaultValue="clippingPanels" variant="plain">
+          <Tabs.Root defaultValue="geometry" variant="plain">
             {/* Horizontal clipping */}
             <Tabs.List bg="bg.muted" gap="2px" rounded="l3" p="1" mb="15px">
+              <Tabs.Trigger value="geometry">Изменение геометрии</Tabs.Trigger>
               <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
               <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
               <Tabs.Trigger value="distanceMeasurement">
@@ -826,6 +908,55 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
               </Tabs.Trigger>
               <Tabs.Indicator rounded="l2" />
             </Tabs.List>
+
+            <Tabs.Content value="geometry">
+              <div className="control-section">
+                <label className="control-label">
+                  <Checkbox.Root
+                    checked={transformEnabled}
+                    onCheckedChange={(e) => setTransformEnabled(!!e.checked)}
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <Checkbox.Label> Изменение геометрии</Checkbox.Label>
+                  </Checkbox.Root>
+                </label>
+                {transformEnabled && (
+                  <HStack>
+                    <Button
+                      size="xs"
+                      variant="subtle"
+                      onClick={() => setTransformMode("translate")}
+                    >
+                      Move
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      onClick={() => setTransformMode("rotate")}
+                    >
+                      Rotate
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      onClick={() => setTransformMode("scale")}
+                    >
+                      Scale
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      onClick={resetGeometryTransform}
+                    >
+                      Сбросить
+                    </Button>
+                  </HStack>
+                )}
+              </div>
+            </Tabs.Content>
 
             <Tabs.Content value="clippingPanels">
               <div className="control-section">
