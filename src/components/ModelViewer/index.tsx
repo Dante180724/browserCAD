@@ -168,11 +168,12 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     model.updateMatrixWorld(true);
 
     setTransformMode("translate");
-    setTransformEnabled(false);
-
-    if (transformControlsRef.current) {
-      transformControlsRef.current.detach();
+    if (transformControlsRef.current && transformEnabled) {
+      transformControlsRef.current.attach(model);
+      transformControlsRef.current.setMode("translate");
     }
+
+    controlsRef.current?.update();
   };
 
   // Handle click for distance measurement
