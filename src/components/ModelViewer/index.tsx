@@ -7,49 +7,85 @@ import {
   CSS2DObject,
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { VirtualFileSystem } from "../../utils/VirtualFileSystem";
-import "./style.css";
 import {
-  Tabs,
-  Card,
-  Text,
-  HStack,
-  Button,
-  Slider,
-  useSlider,
   Box,
+  Button,
+  Card,
   Checkbox,
-  useCheckbox,
-  Select,
   createListCollection,
+  Flex,
+  HStack,
   Portal,
+  Select,
+  Slider,
+  Stack,
+  Text,
+  Tabs,
+  useCheckbox,
+  useSlider,
 } from "@chakra-ui/react";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
+  onReset: () => void;
 }
 
-export function ModelViewer({ fileSystem }: ModelViewerProps) {
+interface GltfResource {
+  uri?: string;
+}
+
+interface GltfJson {
+  buffers?: GltfResource[];
+  images?: GltfResource[];
+}
+
+type ViewerTab =
+  | "geometry"
+  | "clippingPanels"
+  | "dimensions"
+  | "distanceMeasurement";
+
+export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const currentModelRef = useRef<THREE.Group | null>(null);
+  const initialViewStateRef = useRef<{
+    cameraPosition: THREE.Vector3;
+    target: THREE.Vector3;
+  } | null>(null);
 
   //Transform module state
   const [transformMode, setTransformMode] = useState<
     "translate" | "rotate" | "scale"
   >("translate");
   const [transformEnabled, setTransformEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState<ViewerTab>("geometry");
 
   // Clipping planes state
   const horizontalClipEnabled = useCheckbox();
   const verticalClipEnabled = useCheckbox();
-  const [horizontalClipPosition, setHorizontalClipPosition] = useState(0);
-  const [verticalClipPosition, setVerticalClipPosition] = useState(0);
   const horizontalPlaneRef = useRef<THREE.Plane | null>(null);
   const verticalPlaneRef = useRef<THREE.Plane | null>(null);
+  const horizontalSlider = useSlider({
+    defaultValue: [0],
+    thumbAlignment: "contain",
+    min: -2,
+    max: 3,
+    step: 0.0001,
+  });
+  const verticalSlider = useSlider({
+    defaultValue: [0],
+    thumbAlignment: "contain",
+    min: -2,
+    max: 3,
+    step: 0.0001,
+  });
+  const horizontalClipPosition = horizontalSlider.value[0] ?? 0;
+  const verticalClipPosition = verticalSlider.value[0] ?? 0;
 
   // Dimensions state
   const [dimensionsEnabled, setDimensionsEnabled] = useState(false);
@@ -88,8 +124,6 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     ft: { factor: 3.28084, label: "фут" },
   };
 
-  console.log(unitConversions);
-
   const unitsCollection = createListCollection({
     items: Object.entries(unitConversions).map(([value, data]) => ({
       value,
@@ -125,8 +159,16 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     // Create new label
     const convertedDistance = distance * unitConversions[dimensionUnit].factor;
     const labelDiv = document.createElement("div");
-    labelDiv.className = "distance-label";
     labelDiv.textContent = `${convertedDistance.toFixed(2)} ${unitConversions[dimensionUnit].label}`;
+    labelDiv.style.color = "#ff5555";
+    labelDiv.style.fontSize = "14px";
+    labelDiv.style.fontWeight = "700";
+    labelDiv.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+    labelDiv.style.padding = "4px 10px";
+    labelDiv.style.borderRadius = "6px";
+    labelDiv.style.border = "2px solid #ff5555";
+    labelDiv.style.whiteSpace = "nowrap";
+    labelDiv.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
 
     const labelObject = new CSS2DObject(labelDiv);
     labelObject.position.copy(midPoint);
@@ -174,6 +216,48 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     }
 
     controlsRef.current?.update();
+  };
+
+  const resetViewerState = () => {
+    resetGeometryTransform();
+
+    setTransformEnabled(false);
+    setTransformMode("translate");
+    setActiveTab("geometry");
+
+    horizontalClipEnabled.setChecked(false);
+    verticalClipEnabled.setChecked(false);
+    horizontalSlider.setValue([0]);
+    verticalSlider.setValue([0]);
+
+    setDimensionsEnabled(false);
+    setDimensionUnit("mm");
+
+    setDistanceMeasureEnabled(false);
+    resetDistanceMeasurement();
+
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
+      transformControlsRef.current.setMode("translate");
+    }
+
+    const canvas = rendererRef.current?.domElement;
+    if (canvas) {
+      canvas.style.cursor = "grab";
+    }
+
+    if (
+      cameraRef.current &&
+      controlsRef.current &&
+      initialViewStateRef.current
+    ) {
+      cameraRef.current.position.copy(
+        initialViewStateRef.current.cameraPosition,
+      );
+      controlsRef.current.target.copy(initialViewStateRef.current.target);
+      cameraRef.current.lookAt(initialViewStateRef.current.target);
+      controlsRef.current.update();
+    }
   };
 
   // Handle click for distance measurement
@@ -243,7 +327,6 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       canvas.style.cursor = "crosshair";
     } else {
       canvas.style.cursor = "grab";
-      resetDistanceMeasurement();
     }
 
     return () => {
@@ -263,6 +346,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const container = containerRef.current;
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -272,7 +356,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     // Camera setup
     const camera = new THREE.PerspectiveCamera(
       75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
+      container.clientWidth / container.clientHeight,
       0.01, // Near plane
       10000, // Far plane - very large to ensure we can see everything
     );
@@ -282,8 +366,8 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    const canvasWidth = containerRef.current.clientWidth;
-    const canvasHeight = containerRef.current.clientHeight;
+    const canvasWidth = container.clientWidth;
+    const canvasHeight = container.clientHeight;
 
     renderer.setSize(canvasWidth, canvasHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -296,7 +380,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     canvas.style.width = "100%";
     canvas.style.height = "100%";
 
-    containerRef.current.appendChild(canvas);
+    container.appendChild(canvas);
     rendererRef.current = renderer;
 
     // CSS2D Renderer setup for labels
@@ -305,7 +389,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     labelRenderer.domElement.style.position = "absolute";
     labelRenderer.domElement.style.top = "0";
     labelRenderer.domElement.style.pointerEvents = "none";
-    containerRef.current.appendChild(labelRenderer.domElement);
+    container.appendChild(labelRenderer.domElement);
     labelRendererRef.current = labelRenderer;
 
     const resizeObserver = new ResizeObserver(() => {
@@ -330,7 +414,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       labelRendererRef.current.setSize(width, height);
     });
 
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(container);
 
     // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -415,15 +499,12 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     verticalPlaneRef.current = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
 
     // Animation loop
-    let frameCount = 0;
     let animationId: number;
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
-
-      frameCount++;
     };
 
     animate();
@@ -448,11 +529,11 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
       controls.dispose();
-      if (containerRef.current && renderer.domElement) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (renderer.domElement.parentNode === container) {
+        container.removeChild(renderer.domElement);
       }
-      if (containerRef.current && labelRenderer.domElement) {
-        containerRef.current.removeChild(labelRenderer.domElement);
+      if (labelRenderer.domElement.parentNode === container) {
+        container.removeChild(labelRenderer.domElement);
       }
       // Cleanup distance measurement objects
       if (markerARef.current) {
@@ -510,7 +591,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
       } else {
         // For .gltf files, we need to modify the JSON to replace paths with blob URLs
         const gltfText = await modelFile.file.text();
-        const gltfJson = JSON.parse(gltfText);
+        const gltfJson = JSON.parse(gltfText) as GltfJson;
 
         // Get the base path from the model file
         const basePath = modelFile.path.substring(
@@ -535,7 +616,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
         // Replace buffer URIs
         if (gltfJson.buffers) {
-          gltfJson.buffers = gltfJson.buffers.map((buffer: any) => {
+          gltfJson.buffers = gltfJson.buffers.map((buffer) => {
             if (buffer.uri && !buffer.uri.startsWith("data:")) {
               return { ...buffer, uri: resolvePath(buffer.uri) };
             }
@@ -545,7 +626,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
         // Replace image URIs
         if (gltfJson.images) {
-          gltfJson.images = gltfJson.images.map((image: any) => {
+          gltfJson.images = gltfJson.images.map((image) => {
             if (image.uri && !image.uri.startsWith("data:")) {
               return { ...image, uri: resolvePath(image.uri) };
             }
@@ -623,6 +704,11 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
             cameraRef.current.lookAt(0, 0, 0);
             controlsRef.current.target.set(0, 0, 0);
             controlsRef.current.update();
+            controlsRef.current.saveState();
+            initialViewStateRef.current = {
+              cameraPosition: cameraRef.current.position.clone(),
+              target: controlsRef.current.target.clone(),
+            };
           }
 
           // Only revoke if we created this URL (for modified .gltf)
@@ -787,7 +873,7 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
 
     sceneRef.current.add(dimensionsGroup);
     dimensionsGroupRef.current = dimensionsGroup;
-  }, [dimensionsEnabled, dimensionUnit, currentModelRef.current]);
+  }, [dimensionsEnabled, dimensionUnit, fileSystem]);
 
   // Update clipping planes when state changes
   useEffect(() => {
@@ -830,30 +916,6 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     verticalClipPosition,
   ]);
 
-  const horizontalSlider = useSlider({
-    defaultValue: [0],
-    thumbAlignment: "contain",
-    min: -2,
-    max: 3,
-    step: 0.0001,
-  });
-
-  const verticalSlider = useSlider({
-    defaultValue: [0],
-    thumbAlignment: "contain",
-    min: -2,
-    max: 3,
-    step: 0.0001,
-  });
-
-  useEffect(() => {
-    setHorizontalClipPosition(horizontalSlider.value[0]);
-  }, [horizontalSlider.value]);
-
-  useEffect(() => {
-    setVerticalClipPosition(verticalSlider.value[0]);
-  }, [verticalSlider.value]);
-
   useEffect(() => {
     if (transformControlsRef.current) {
       transformControlsRef.current.setMode(transformMode);
@@ -872,347 +934,486 @@ export function ModelViewer({ fileSystem }: ModelViewerProps) {
     }
   }, [transformEnabled]);
 
-  return (
-    <div className="model-viewer-wrapper">
-      <div ref={containerRef} className="model-viewer" />
-      <Card.Root
-        bg="rgba(20, 23, 28, 0.75)"
-        color="gray.100"
-        border="1px solid"
-        borderColor="whiteAlpha.200"
-        shadow="2xl"
-        backdropFilter="blur(12px)"
-        className="controls-panel"
-      >
-        <Card.Header
-          borderBottom="1px solid"
+  const currentModelName = fileSystem?.findModelFile()?.file.name;
+
+  const renderUnitSelect = (label: string) => (
+    <Select.Root
+      collection={unitsCollection}
+      value={[dimensionUnit]}
+      variant="subtle"
+      onValueChange={(event) =>
+        setDimensionUnit(event.value[0] as typeof dimensionUnit)
+      }
+      size="xs"
+      width="100%"
+    >
+      <Select.HiddenSelect />
+      <Select.Label>{label}</Select.Label>
+      <Select.Control>
+        <Select.Trigger
+          width="100%"
+          bg="rgba(255, 255, 255, 0.06)"
+          backdropFilter="blur(10px)"
+          border="1px solid"
           borderColor="whiteAlpha.200"
-          className="controls-panel__title"
+          _hover={{ bg: "rgba(255,255,255,0.12)" }}
+          _expanded={{ bg: "rgba(255,255,255,0.16)" }}
         >
-          <Text fontSize="lg" fontWeight="semibold">
-            Измерения
-          </Text>
-        </Card.Header>
+          <Select.ValueText placeholder="Выберите ед.измерения" />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          <Select.Indicator />
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content
+            bg="rgba(70, 70, 70, 0.9)"
+            backdropFilter="blur(24px)"
+            border="1px solid"
+            borderColor="rgba(200, 200, 200, 0.25)"
+            boxShadow="0 8px 32px rgba(0,0,0,0.25)"
+            color="gray.100"
+          >
+            {unitsCollection.items.map((unit) => (
+              <Select.Item
+                item={unit}
+                key={unit.value}
+                _hover={{ bg: "rgba(255,255,255,0.1)" }}
+              >
+                {unit.label}
+                <Select.ItemIndicator />
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
 
-        <Card.Body>
-          {/* Clipping controls */}
-          <Tabs.Root defaultValue="geometry" variant="plain">
-            {/* Horizontal clipping */}
-            <Tabs.List bg="bg.muted" gap="2px" rounded="l3" p="1" mb="15px">
-              <Tabs.Trigger value="geometry">Изменение геометрии</Tabs.Trigger>
-              <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
-              <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
-              <Tabs.Trigger value="distanceMeasurement">
-                Измерение расстояния
-              </Tabs.Trigger>
-              <Tabs.Indicator rounded="l2" />
-            </Tabs.List>
+  return (
+    <Flex direction="column" w="full" h="full" bg="rgba(7, 11, 20, 0.72)">
+      <Box
+        as="section"
+        px={{ base: 4, md: 6 }}
+        py={{ base: 4, md: 5 }}
+        borderBottom="1px solid"
+        borderColor="whiteAlpha.200"
+        bg="rgba(20, 23, 28, 0.78)"
+        backdropFilter="blur(16px)"
+        flexShrink={0}
+        h={{ base: "320px", xl: "340px" }}
+        overflow="hidden"
+      >
+        <Flex
+          direction={{ base: "column", xl: "row" }}
+          align="stretch"
+          justify="space-between"
+          gap="4"
+          h="full"
+          minH="0"
+        >
+          <Card.Root
+            flex="1"
+            h="full"
+            minW="0"
+            bg="transparent"
+            color="gray.100"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            shadow="none"
+            overflow="hidden"
+          >
+            <Card.Header pb="4">
+              <Text fontSize="xl" fontWeight="semibold">
+                Инструменты просмотра
+              </Text>
+              <Text mt="1" fontSize="sm" color="whiteAlpha.700">
+                {currentModelName
+                  ? `Текущая модель: ${currentModelName}`
+                  : "Модель загружена"}
+              </Text>
+            </Card.Header>
 
-            <Tabs.Content value="geometry">
-              <div className="control-section">
-                <label className="control-label">
-                  <Checkbox.Root
-                    checked={transformEnabled}
-                    onCheckedChange={(e) => setTransformEnabled(!!e.checked)}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                    <Checkbox.Label> Изменение геометрии</Checkbox.Label>
-                  </Checkbox.Root>
-                </label>
-                {transformEnabled && (
-                  <HStack>
-                    <Button
-                      size="xs"
-                      variant="subtle"
-                      onClick={() => setTransformMode("translate")}
-                    >
-                      Move
-                    </Button>
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      onClick={() => setTransformMode("rotate")}
-                    >
-                      Rotate
-                    </Button>
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      onClick={() => setTransformMode("scale")}
-                    >
-                      Scale
-                    </Button>
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      onClick={resetGeometryTransform}
-                    >
-                      Сбросить
-                    </Button>
-                  </HStack>
-                )}
-              </div>
-            </Tabs.Content>
+            <Card.Body pt="0" flex="1" minH="0" overflowY="auto">
+              <Tabs.Root
+                value={activeTab}
+                onValueChange={(details) =>
+                  setActiveTab(details.value as ViewerTab)
+                }
+                variant="plain"
+                fitted
+              >
+                <Tabs.List
+                  flexWrap="wrap"
+                  bg="whiteAlpha.100"
+                  gap="2"
+                  rounded="xl"
+                  p="1.5"
+                  mb="4"
+                  w="100%"
+                >
+                  <Tabs.Trigger value="geometry">
+                    Изменение геометрии
+                  </Tabs.Trigger>
+                  <Tabs.Trigger value="clippingPanels">Сечения</Tabs.Trigger>
+                  <Tabs.Trigger value="dimensions">Размеры</Tabs.Trigger>
+                  <Tabs.Trigger value="distanceMeasurement">
+                    Измерение расстояния
+                  </Tabs.Trigger>
+                  <Tabs.Indicator rounded="lg" />
+                </Tabs.List>
 
-            <Tabs.Content value="clippingPanels">
-              <div className="control-section">
-                <label className="control-label">
-                  <Checkbox.RootProvider
-                    value={horizontalClipEnabled}
-                    onChange={() => {
-                      horizontalClipEnabled.setChecked(
-                        !horizontalClipEnabled.checked,
-                      );
-                    }}
-                  >
-                    <Checkbox.Root>
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
-                    </Checkbox.Root>
-                  </Checkbox.RootProvider>
-                </label>
-                {horizontalClipEnabled.checked && (
-                  <Box>
-                    <Slider.RootProvider value={horizontalSlider} width="450px">
-                      <Slider.Control>
-                        <Slider.Track>
-                          <Slider.Range />
-                        </Slider.Track>
-                        <Slider.Thumb index={0}>
-                          <Slider.HiddenInput />
-                        </Slider.Thumb>
-                      </Slider.Control>
-                    </Slider.RootProvider>
-                    <Text fontSize="11px">
-                      Позиция: {horizontalSlider.value}
-                    </Text>
-                  </Box>
-                )}
-              </div>
-
-              {/* Vertical clipping */}
-              <div className="control-section">
-                <label className="control-label">
-                  <Checkbox.RootProvider
-                    value={verticalClipEnabled}
-                    onChange={() => {
-                      verticalClipEnabled.setChecked(
-                        !verticalClipEnabled.checked,
-                      );
-                    }}
-                  >
-                    <Checkbox.Root>
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
-                    </Checkbox.Root>
-                  </Checkbox.RootProvider>
-                </label>
-                {verticalClipEnabled.checked && (
-                  <Box>
-                    <Slider.RootProvider value={verticalSlider} width="450px">
-                      <Slider.Control>
-                        <Slider.Track>
-                          <Slider.Range />
-                        </Slider.Track>
-                        <Slider.Thumb index={0}>
-                          <Slider.HiddenInput />
-                        </Slider.Thumb>
-                      </Slider.Control>
-                    </Slider.RootProvider>
-                    <Text fontSize="11px">Позиция: {verticalSlider.value}</Text>
-                  </Box>
-                )}
-              </div>
-            </Tabs.Content>
-
-            {/* Dimensions */}
-            <Tabs.Content value="dimensions">
-              <div className="control-section control-section--bordered">
-                <label className="control-label">
-                  <Checkbox.Root
-                    checked={dimensionsEnabled}
-                    onCheckedChange={(e) => setDimensionsEnabled(!!e.checked)}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                    <Checkbox.Label> Показать размеры модели</Checkbox.Label>
-                  </Checkbox.Root>
-                </label>
-                {dimensionsEnabled && (
-                  <div className="dimensions-container">
-                    <Select.Root
-                      collection={unitsCollection}
-                      value={[dimensionUnit]}
-                      variant="subtle"
-                      onValueChange={(e) =>
-                        setDimensionUnit(e.value[0] as typeof dimensionUnit)
+                <Tabs.Content value="geometry">
+                  <Stack gap="4">
+                    <Checkbox.Root
+                      checked={transformEnabled}
+                      onCheckedChange={(event) =>
+                        setTransformEnabled(!!event.checked)
                       }
-                      size="xs"
-                      width="100%"
-                      mb="5px"
                     >
-                      <Select.HiddenSelect />
-                      <Select.Label>Выберите ед.измерения</Select.Label>
-                      <Select.Control>
-                        <Select.Trigger
-                          bg="rgba(255, 255, 255, 0.06)"
-                          backdropFilter="blur(10px)"
-                          border="1px solid"
-                          borderColor="whiteAlpha.200"
-                          _hover={{ bg: "rgba(255,255,255,0.12)" }}
-                          _expanded={{ bg: "rgba(255,255,255,0.16)" }}
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>Изменение геометрии</Checkbox.Label>
+                    </Checkbox.Root>
+
+                    {transformEnabled && (
+                      <HStack gap="2" flexWrap="wrap">
+                        <Button
+                          size="md"
+                          variant={
+                            transformMode === "translate" ? "solid" : "subtle"
+                          }
+                          onClick={() => setTransformMode("translate")}
                         >
-                          <Select.ValueText placeholder="Выберите ед.измерения" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Portal>
-                        <Select.Positioner>
-                          <Select.Content
-                            bg="rgba(70,70,70,0.15)"
-                            backdropFilter="blur(75px)"
-                            border="1px solid"
-                            borderColor="rgba(200, 200, 200, 0.25)"
-                            boxShadow="0 8px 32px rgba(0,0,0,0.25)"
-                            color="gray.100"
-                          >
-                            {unitsCollection.items.map((unit) => (
-                              <Select.Item
-                                item={unit}
-                                key={unit.value}
-                                _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                              >
-                                {unit.label}
-
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Portal>
-                    </Select.Root>
-                    <div className="dimensions-legend">
-                      <div>🔴 Красный = Ширина (X)</div>
-                      <div>🟢 Зелёный = Высота (Y)</div>
-                      <div>🔵 Синий = Глубина (Z)</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Tabs.Content>
-
-            {/* Distance Measurement */}
-            <Tabs.Content value="distanceMeasurement">
-              <div className="control-section control-section--bordered">
-                <label className="control-label">
-                  <Checkbox.Root
-                    checked={distanceMeasureEnabled}
-                    onCheckedChange={(e) =>
-                      setDistanceMeasureEnabled(!!e.checked)
-                    }
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control>
-                      <Checkbox.Indicator />
-                    </Checkbox.Control>
-                    <Checkbox.Label> Измерение расстояния</Checkbox.Label>
-                  </Checkbox.Root>
-                </label>
-                {distanceMeasureEnabled && (
-                  <div className="distance-container">
-                    <div className="distance-instructions">
-                      Кликните на две точки модели для измерения расстояния
-                      между ними
-                    </div>
-                    <div className="dimensions-select-wrapper">
-                      <Select.Root
-                        collection={unitsCollection}
-                        value={[dimensionUnit]}
-                        variant="subtle"
-                        onValueChange={(e) =>
-                          setDimensionUnit(e.value[0] as typeof dimensionUnit)
-                        }
-                        size="xs"
-                        width="100%"
-                      >
-                        <Select.HiddenSelect />
-                        <Select.Label>Выберите ед.измерения</Select.Label>
-                        <Select.Control>
-                          <Select.Trigger
-                            width="100%"
-                            bg="rgba(255, 255, 255, 0.06)"
-                            backdropFilter="blur(10px)"
-                            border="1px solid"
-                            borderColor="whiteAlpha.200"
-                            _hover={{ bg: "rgba(255,255,255,0.12)" }}
-                            _expanded={{ bg: "rgba(255,255,255,0.16)" }}
-                          >
-                            <Select.ValueText placeholder="Выберите ед.измерения" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Portal>
-                          <Select.Positioner>
-                            <Select.Content
-                              bg="rgba(70,70,70,0.15)"
-                              backdropFilter="blur(75px)"
-                              border="1px solid"
-                              borderColor="rgba(200, 200, 200, 0.25)"
-                              boxShadow="0 8px 32px rgba(0,0,0,0.25)"
-                              color="gray.100"
-                            >
-                              {unitsCollection.items.map((unit) => (
-                                <Select.Item
-                                  item={unit}
-                                  key={unit.value}
-                                  _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                                >
-                                  {unit.label}
-
-                                  <Select.ItemIndicator />
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Portal>
-                      </Select.Root>
-                    </div>
-                    {measuredDistance !== null && (
-                      <div className="distance-result">
-                        <strong>Расстояние:</strong>{" "}
-                        {(
-                          measuredDistance *
-                          unitConversions[dimensionUnit].factor
-                        ).toFixed(2)}{" "}
-                        {unitConversions[dimensionUnit].label}
-                      </div>
+                          Перемещение
+                        </Button>
+                        <Button
+                          size="md"
+                          variant={
+                            transformMode === "rotate" ? "solid" : "subtle"
+                          }
+                          onClick={() => setTransformMode("rotate")}
+                        >
+                          Вращение
+                        </Button>
+                        <Button
+                          size="md"
+                          variant={
+                            transformMode === "scale" ? "solid" : "subtle"
+                          }
+                          onClick={() => setTransformMode("scale")}
+                        >
+                          Растянуть/сжать
+                        </Button>
+                        <Button
+                          size="md"
+                          variant="subtle"
+                          onClick={resetGeometryTransform}
+                        >
+                          Сбросить
+                        </Button>
+                      </HStack>
                     )}
-                    <Button
-                      width="100%"
-                      size="sm"
-                      variant="subtle"
-                      onClick={resetDistanceMeasurement}
+                  </Stack>
+                </Tabs.Content>
+
+                <Tabs.Content value="clippingPanels">
+                  <Stack gap="4">
+                    <Box
+                      p="4"
+                      rounded="xl"
+                      bg="whiteAlpha.50"
+                      border="1px solid"
+                      borderColor="whiteAlpha.100"
                     >
-                      Сбросить измерение
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Tabs.Content>
-          </Tabs.Root>
-        </Card.Body>
-      </Card.Root>
-    </div>
+                      <Checkbox.Root
+                        checked={horizontalClipEnabled.checked}
+                        onCheckedChange={(event) =>
+                          horizontalClipEnabled.setChecked(!!event.checked)
+                        }
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
+                      </Checkbox.Root>
+
+                      {horizontalClipEnabled.checked && (
+                        <Box mt="4">
+                          <Slider.RootProvider
+                            value={horizontalSlider}
+                            width="100%"
+                          >
+                            <Slider.Control>
+                              <Slider.Track>
+                                <Slider.Range />
+                              </Slider.Track>
+                              <Slider.Thumb index={0}>
+                                <Slider.HiddenInput />
+                              </Slider.Thumb>
+                            </Slider.Control>
+                          </Slider.RootProvider>
+                          <Text mt="2" fontSize="xs" color="whiteAlpha.700">
+                            Позиция: {horizontalSlider.value[0].toFixed(4)}
+                          </Text>
+                        </Box>
+                      )}
+                    </Box>
+
+                    <Box
+                      p="4"
+                      rounded="xl"
+                      bg="whiteAlpha.50"
+                      border="1px solid"
+                      borderColor="whiteAlpha.100"
+                    >
+                      <Checkbox.Root
+                        checked={verticalClipEnabled.checked}
+                        onCheckedChange={(event) =>
+                          verticalClipEnabled.setChecked(!!event.checked)
+                        }
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
+                      </Checkbox.Root>
+
+                      {verticalClipEnabled.checked && (
+                        <Box mt="4">
+                          <Slider.RootProvider
+                            value={verticalSlider}
+                            width="100%"
+                          >
+                            <Slider.Control>
+                              <Slider.Track>
+                                <Slider.Range />
+                              </Slider.Track>
+                              <Slider.Thumb index={0}>
+                                <Slider.HiddenInput />
+                              </Slider.Thumb>
+                            </Slider.Control>
+                          </Slider.RootProvider>
+                          <Text mt="2" fontSize="xs" color="whiteAlpha.700">
+                            Позиция: {verticalSlider.value[0].toFixed(4)}
+                          </Text>
+                        </Box>
+                      )}
+                    </Box>
+                  </Stack>
+                </Tabs.Content>
+
+                <Tabs.Content value="dimensions">
+                  <Stack gap="4">
+                    <Checkbox.Root
+                      checked={dimensionsEnabled}
+                      onCheckedChange={(event) =>
+                        setDimensionsEnabled(!!event.checked)
+                      }
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>Показать размеры модели</Checkbox.Label>
+                    </Checkbox.Root>
+
+                    {dimensionsEnabled && (
+                      <Box
+                        p="4"
+                        rounded="xl"
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.100"
+                      >
+                        {renderUnitSelect("Выберите ед. измерения")}
+                        <Stack
+                          mt="3"
+                          gap="1"
+                          fontSize="xs"
+                          color="whiteAlpha.700"
+                        >
+                          <Text>Красный = ширина (X)</Text>
+                          <Text>Зеленый = высота (Y)</Text>
+                          <Text>Синий = глубина (Z)</Text>
+                        </Stack>
+                      </Box>
+                    )}
+                  </Stack>
+                </Tabs.Content>
+
+                <Tabs.Content value="distanceMeasurement">
+                  <Stack gap="4">
+                    <Checkbox.Root
+                      checked={distanceMeasureEnabled}
+                      onCheckedChange={(event) => {
+                        const isEnabled = !!event.checked;
+                        setDistanceMeasureEnabled(isEnabled);
+                        if (!isEnabled) {
+                          resetDistanceMeasurement();
+                        }
+                      }}
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>Измерение расстояния</Checkbox.Label>
+                    </Checkbox.Root>
+
+                    {distanceMeasureEnabled && (
+                      <Box
+                        p="4"
+                        rounded="xl"
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.100"
+                      >
+                        <Text
+                          fontSize="xs"
+                          color="whiteAlpha.700"
+                          lineHeight="1.5"
+                          mb="3"
+                        >
+                          Кликните на две точки модели для измерения расстояния
+                          между ними.
+                        </Text>
+
+                        {renderUnitSelect("Выберите ед. измерения")}
+
+                        {measuredDistance !== null && (
+                          <Box
+                            mt="3"
+                            rounded="lg"
+                            border="1px solid"
+                            borderColor="rgba(255, 85, 85, 0.5)"
+                            bg="rgba(255, 85, 85, 0.2)"
+                            px="3"
+                            py="2.5"
+                          >
+                            <Text fontSize="sm" fontWeight="semibold">
+                              Расстояние:{" "}
+                              {(
+                                measuredDistance *
+                                unitConversions[dimensionUnit].factor
+                              ).toFixed(2)}{" "}
+                              {unitConversions[dimensionUnit].label}
+                            </Text>
+                          </Box>
+                        )}
+
+                        <Button
+                          mt="3"
+                          width="100%"
+                          size="sm"
+                          variant="subtle"
+                          onClick={resetDistanceMeasurement}
+                        >
+                          Сбросить измерение
+                        </Button>
+                      </Box>
+                    )}
+                  </Stack>
+                </Tabs.Content>
+              </Tabs.Root>
+            </Card.Body>
+          </Card.Root>
+
+          <Card.Root
+            w={{ base: "full", xl: "280px" }}
+            h="full"
+            flexShrink={0}
+            bg="rgba(255, 255, 255, 0.04)"
+            color="gray.100"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            shadow="none"
+            overflow="hidden"
+          >
+            <Card.Header pb="2">
+              <Text
+                fontSize="xs"
+                textTransform="uppercase"
+                letterSpacing="0.14em"
+                color="whiteAlpha.700"
+              >
+                Действия
+              </Text>
+            </Card.Header>
+            <Card.Body
+              pt="0"
+              flex="1"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Stack gap="3" w="full" maxW="220px" textAlign="center">
+                <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.5">
+                  Можно заменить текущую модель или в любой момент вернуть сцену
+                  к исходному виду.
+                </Text>
+                <Button
+                  bg="#5A7FAF"
+                  color="white"
+                  border="1px solid"
+                  borderColor="whiteAlpha.300"
+                  width="100%"
+                  borderRadius="12px"
+                  fontSize="0.875rem"
+                  fontWeight="500"
+                  transition="all 0.2s ease"
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    bg: "whiteAlpha.200",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                  }}
+                  onClick={resetViewerState}
+                >
+                  Сбросить изменения
+                </Button>
+                <Button
+                  bg="#5A7FAF"
+                  color="white"
+                  width="100%"
+                  borderRadius="12px"
+                  fontSize="0.875rem"
+                  fontWeight="500"
+                  boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+                  transition="all 0.2s ease"
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 16px rgba(0, 0, 0, 0.15)",
+                    bg: "#6B90BF",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                  }}
+                  onClick={onReset}
+                >
+                  Загрузить другую модель
+                </Button>
+              </Stack>
+            </Card.Body>
+          </Card.Root>
+        </Flex>
+      </Box>
+
+      <Box as="section" flex="1" minH="0" p={{ base: 3, md: 4 }}>
+        <Box
+          ref={containerRef}
+          position="relative"
+          w="full"
+          h="full"
+          minH="260px"
+          overflow="hidden"
+          borderRadius={{ base: "20px", md: "24px" }}
+          bg="#f5f5f5"
+          boxShadow="inset 0 0 0 1px rgba(255, 255, 255, 0.08)"
+        />
+      </Box>
+    </Flex>
   );
 }

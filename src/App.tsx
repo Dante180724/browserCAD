@@ -3,9 +3,8 @@ import { ModelViewer } from "./components/ModelViewer";
 import { FileUpload } from "./components/FileUpload";
 import { VirtualFileSystem } from "./utils/VirtualFileSystem";
 import { Provider } from "./components/UI/provider";
-import "./App.scss";
 import ViewerBackground from "./components/UI/ViewerBackground";
-import { Button, Box } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 
 const MotionBox = motion(Box);
@@ -33,75 +32,82 @@ function App() {
 
   return (
     <Provider>
-      <div className="bg">
-        <ViewerBackground />
-        <div className="app">
-          <header className="header">
-            <h1>BrowserCAD</h1>
-            <p>Просмотр 3D моделей в браузере</p>
-          </header>
-          <main className="content">
-            {/* <div className="viewer-container"> */}
+      <Box position="fixed" inset="0" overflow="hidden" bg="#050814">
+        <Box position="absolute" inset="0">
+          <ViewerBackground />
+        </Box>
+
+        <Flex position="relative" zIndex={1} direction="column" h="full">
+          {!fileSystem && (
+            <Box
+              as="header"
+              px={{ base: 6, md: 8 }}
+              pt={{ base: 6, md: 8 }}
+              pb={{ base: 3, md: 4 }}
+              textAlign="center"
+              color="white"
+            >
+              <Heading
+                size={{ base: "2xl", md: "3xl" }}
+                fontWeight="700"
+                letterSpacing="-0.04em"
+              >
+                BrowserCAD
+              </Heading>
+              <Text
+                mt="2"
+                fontSize={{ base: "sm", md: "md" }}
+                color="whiteAlpha.800"
+              >
+                Загружайте модель и сразу переходите в полноэкранный просмотр.
+              </Text>
+            </Box>
+          )}
+
+          <Flex
+            as="main"
+            flex="1"
+            minH="0"
+            align={fileSystem ? "stretch" : "center"}
+            justify={fileSystem ? "stretch" : "center"}
+            px={fileSystem ? 0 : { base: 4, md: 8 }}
+            pb={fileSystem ? 0 : { base: 4, md: 8 }}
+          >
             <MotionBox
               layout
               initial={false}
               animate={{
                 width: fileSystem ? "100%" : "460px",
                 height: fileSystem ? "100%" : "420px",
-                scale: fileSystem ? 1 : 0.95,
-                opacity: fileSystem ? 1 : 0.9,
+                scale: fileSystem ? 1 : 0.96,
+                opacity: 1,
               }}
               transition={{
                 duration: 0.35,
                 ease: [0.4, 0, 0.2, 1],
               }}
-              maxW="1200px"
-              maxH="800px"
-              bg="white"
-              borderRadius={fileSystem ? "24px" : "20px"}
-              boxShadow="0 20px 60px rgba(0,0,0,0.3)"
+              w={fileSystem ? "full" : "460px"}
+              h={fileSystem ? "full" : "420px"}
+              maxW={fileSystem ? "none" : "460px"}
+              maxH={fileSystem ? "none" : "420px"}
+              bg={fileSystem ? "transparent" : "white"}
+              borderRadius={fileSystem ? "0" : "24px"}
+              boxShadow={fileSystem ? "none" : "0 20px 60px rgba(0, 0, 0, 0.3)"}
               overflow="hidden"
               display="flex"
-              alignItems="center"
-              justifyContent="center"
+              alignItems="stretch"
+              justifyContent="stretch"
               position="relative"
             >
               {fileSystem ? (
-                <>
-                  <ModelViewer fileSystem={fileSystem} />
-                  <Box position="absolute" top="1.5rem" right="1.5rem">
-                    <Button
-                      bg="#5A7FAF"
-                      color="white"
-                      px="1.5rem"
-                      py="0.75rem"
-                      border="none"
-                      borderRadius="12px"
-                      fontSize="0.875rem"
-                      fontWeight="500"
-                      boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
-                      transition="all 0.2s ease"
-                      _hover={{
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 6px 16px rgba(0, 0, 0, 0.15)",
-                        bg: "#6B90BF",
-                      }}
-                      _active={{
-                        transform: "translateY(0)",
-                      }}
-                      onClick={handleReset}
-                    >
-                      Загрузить другую модель
-                    </Button>
-                  </Box>
-                </>
+                <ModelViewer fileSystem={fileSystem} onReset={handleReset} />
               ) : (
                 <FileUpload onFilesSelect={handleFilesSelect} />
               )}
             </MotionBox>
-          </main>
-        </div>
-      </div>
+          </Flex>
+        </Flex>
+      </Box>
     </Provider>
   );
 }

@@ -16,7 +16,7 @@ export class VirtualFileSystem {
     files.forEach(file => {
       // Get the relative path from the file
       // For files from a folder upload, webkitRelativePath contains the path
-      const path = (file as any).webkitRelativePath || file.name;
+      const path = file.webkitRelativePath || file.name;
       const blobUrl = URL.createObjectURL(file);
 
       // Store with blob URL - don't create it multiple times!

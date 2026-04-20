@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ImDownload } from "react-icons/im";
-import { Icon, Box, Button } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Icon, Input, Text } from "@chakra-ui/react";
 
 interface FileUploadProps {
   onFilesSelect: (files: File[]) => void;
@@ -115,28 +115,40 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
   };
 
   return (
-    <div
-      className={`file-upload ${isDragging ? "dragging" : ""}`}
+    <Flex
+      direction="column"
+      align="center"
+      justify="center"
+      gap="6"
+      w="full"
+      h="full"
+      px={{ base: 6, md: 10 }}
+      py={{ base: 8, md: 12 }}
+      textAlign="center"
+      cursor="pointer"
+      bg={isDragging ? "rgba(240, 244, 248, 0.96)" : "white"}
+      transition="all 0.3s ease"
+      _hover={{ bg: "rgba(250, 250, 250, 0.98)" }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <input
+      <Input
         ref={fileInputRef}
         type="file"
         accept=".gltf,.glb"
         onChange={handleFileChange}
-        style={{ display: "none" }}
+        display="none"
       />
-      <input
+      <Input
         ref={folderInputRef}
         type="file"
-        // @ts-ignore - webkitdirectory is not in TypeScript types
+        // @ts-expect-error - webkitdirectory is not in TypeScript types
         webkitdirectory=""
         directory=""
         multiple
         onChange={handleFileChange}
-        style={{ display: "none" }}
+        display="none"
       />
       <Box role="group">
         <Icon
@@ -149,8 +161,16 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
           _hover={{ transform: "translateY(-8px)", opacity: 1 }}
         />
       </Box>
-      <h3>Загрузите 3D модель</h3>
-      <p>Перетащите папку с моделью сюда или выберите:</p>
+
+      <Box>
+        <Heading size="xl" color="gray.800">
+          Загрузите 3D модель
+        </Heading>
+        <Text mt="3" fontSize="md" color="gray.600" maxW="420px" lineHeight="1.6">
+          Перетащите папку с моделью сюда или выберите удобный способ загрузки.
+        </Text>
+      </Box>
+
       <Box
         display="flex"
         gap="1rem"
@@ -207,6 +227,6 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
           Один .glb файл
         </Button>
       </Box>
-    </div>
+    </Flex>
   );
 }
