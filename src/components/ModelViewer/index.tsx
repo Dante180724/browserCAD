@@ -995,21 +995,21 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     <Flex direction="column" w="full" h="full" bg="rgba(7, 11, 20, 0.72)">
       <Box
         as="section"
-        px={{ base: 4, md: 6 }}
-        py={{ base: 4, md: 5 }}
+        px={{ base: 0, md: 0 }}
+        py={{ base: 0, md: 0 }}
         borderBottom="1px solid"
         borderColor="whiteAlpha.200"
         bg="rgba(20, 23, 28, 0.78)"
         backdropFilter="blur(16px)"
         flexShrink={0}
-        h={{ base: "320px", xl: "340px" }}
+        h="35%"
         overflow="hidden"
       >
         <Flex
           direction={{ base: "column", xl: "row" }}
           align="stretch"
           justify="space-between"
-          gap="4"
+          gap="3"
           h="full"
           minH="0"
         >
@@ -1035,7 +1035,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               </Text>
             </Card.Header>
 
-            <Card.Body pt="0" flex="1" minH="0" overflowY="auto">
+            <Card.Body pt="0" flex="1" minH="0" overflow="hidden">
               <Tabs.Root
                 value={activeTab}
                 onValueChange={(details) =>
@@ -1043,6 +1043,10 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                 }
                 variant="plain"
                 fitted
+                display="flex"
+                flexDirection="column"
+                h="full"
+                minH="0"
               >
                 <Tabs.List
                   flexWrap="wrap"
@@ -1052,6 +1056,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                   p="1.5"
                   mb="4"
                   w="100%"
+                  flexShrink={0}
                 >
                   <Tabs.Trigger value="geometry">
                     Изменение геометрии
@@ -1063,259 +1068,260 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                   </Tabs.Trigger>
                   <Tabs.Indicator rounded="lg" />
                 </Tabs.List>
-
-                <Tabs.Content value="geometry">
-                  <Stack gap="4">
-                    <Checkbox.Root
-                      checked={transformEnabled}
-                      onCheckedChange={(event) =>
-                        setTransformEnabled(!!event.checked)
-                      }
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>Изменение геометрии</Checkbox.Label>
-                    </Checkbox.Root>
-
-                    {transformEnabled && (
-                      <HStack gap="2" flexWrap="wrap">
-                        <Button
-                          size="md"
-                          variant={
-                            transformMode === "translate" ? "solid" : "subtle"
-                          }
-                          onClick={() => setTransformMode("translate")}
-                        >
-                          Перемещение
-                        </Button>
-                        <Button
-                          size="md"
-                          variant={
-                            transformMode === "rotate" ? "solid" : "subtle"
-                          }
-                          onClick={() => setTransformMode("rotate")}
-                        >
-                          Вращение
-                        </Button>
-                        <Button
-                          size="md"
-                          variant={
-                            transformMode === "scale" ? "solid" : "subtle"
-                          }
-                          onClick={() => setTransformMode("scale")}
-                        >
-                          Растянуть/сжать
-                        </Button>
-                        <Button
-                          size="md"
-                          variant="subtle"
-                          onClick={resetGeometryTransform}
-                        >
-                          Сбросить
-                        </Button>
-                      </HStack>
-                    )}
-                  </Stack>
-                </Tabs.Content>
-
-                <Tabs.Content value="clippingPanels">
-                  <Stack gap="4">
-                    <Box
-                      p="4"
-                      rounded="xl"
-                      bg="whiteAlpha.50"
-                      border="1px solid"
-                      borderColor="whiteAlpha.100"
-                    >
+                <Box flex="1" minH="0" overflowY="auto" pr="1">
+                  <Tabs.Content value="geometry">
+                    <Stack gap="4">
                       <Checkbox.Root
-                        checked={horizontalClipEnabled.checked}
+                        checked={transformEnabled}
                         onCheckedChange={(event) =>
-                          horizontalClipEnabled.setChecked(!!event.checked)
+                          setTransformEnabled(!!event.checked)
                         }
                       >
                         <Checkbox.HiddenInput />
-                        <Checkbox.Control />
-                        <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Изменение геометрии</Checkbox.Label>
                       </Checkbox.Root>
 
-                      {horizontalClipEnabled.checked && (
-                        <Box mt="4">
-                          <Slider.RootProvider
-                            value={horizontalSlider}
-                            width="100%"
+                      {transformEnabled && (
+                        <HStack gap="2" flexWrap="wrap">
+                          <Button
+                            size="md"
+                            variant={
+                              transformMode === "translate" ? "solid" : "subtle"
+                            }
+                            onClick={() => setTransformMode("translate")}
                           >
-                            <Slider.Control>
-                              <Slider.Track>
-                                <Slider.Range />
-                              </Slider.Track>
-                              <Slider.Thumb index={0}>
-                                <Slider.HiddenInput />
-                              </Slider.Thumb>
-                            </Slider.Control>
-                          </Slider.RootProvider>
-                          <Text mt="2" fontSize="xs" color="whiteAlpha.700">
-                            Позиция: {horizontalSlider.value[0].toFixed(4)}
-                          </Text>
-                        </Box>
-                      )}
-                    </Box>
-
-                    <Box
-                      p="4"
-                      rounded="xl"
-                      bg="whiteAlpha.50"
-                      border="1px solid"
-                      borderColor="whiteAlpha.100"
-                    >
-                      <Checkbox.Root
-                        checked={verticalClipEnabled.checked}
-                        onCheckedChange={(event) =>
-                          verticalClipEnabled.setChecked(!!event.checked)
-                        }
-                      >
-                        <Checkbox.HiddenInput />
-                        <Checkbox.Control />
-                        <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
-                      </Checkbox.Root>
-
-                      {verticalClipEnabled.checked && (
-                        <Box mt="4">
-                          <Slider.RootProvider
-                            value={verticalSlider}
-                            width="100%"
+                            Перемещение
+                          </Button>
+                          <Button
+                            size="md"
+                            variant={
+                              transformMode === "rotate" ? "solid" : "subtle"
+                            }
+                            onClick={() => setTransformMode("rotate")}
                           >
-                            <Slider.Control>
-                              <Slider.Track>
-                                <Slider.Range />
-                              </Slider.Track>
-                              <Slider.Thumb index={0}>
-                                <Slider.HiddenInput />
-                              </Slider.Thumb>
-                            </Slider.Control>
-                          </Slider.RootProvider>
-                          <Text mt="2" fontSize="xs" color="whiteAlpha.700">
-                            Позиция: {verticalSlider.value[0].toFixed(4)}
-                          </Text>
-                        </Box>
+                            Вращение
+                          </Button>
+                          <Button
+                            size="md"
+                            variant={
+                              transformMode === "scale" ? "solid" : "subtle"
+                            }
+                            onClick={() => setTransformMode("scale")}
+                          >
+                            Растянуть/сжать
+                          </Button>
+                          <Button
+                            size="md"
+                            variant="subtle"
+                            onClick={resetGeometryTransform}
+                          >
+                            Сбросить
+                          </Button>
+                        </HStack>
                       )}
-                    </Box>
-                  </Stack>
-                </Tabs.Content>
+                    </Stack>
+                  </Tabs.Content>
 
-                <Tabs.Content value="dimensions">
-                  <Stack gap="4">
-                    <Checkbox.Root
-                      checked={dimensionsEnabled}
-                      onCheckedChange={(event) =>
-                        setDimensionsEnabled(!!event.checked)
-                      }
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>Показать размеры модели</Checkbox.Label>
-                    </Checkbox.Root>
-
-                    {dimensionsEnabled && (
+                  <Tabs.Content value="clippingPanels">
+                    <Stack gap="2">
                       <Box
-                        p="4"
+                        p="2"
                         rounded="xl"
                         bg="whiteAlpha.50"
                         border="1px solid"
                         borderColor="whiteAlpha.100"
                       >
-                        {renderUnitSelect("Выберите ед. измерения")}
-                        <Stack
-                          mt="3"
-                          gap="1"
-                          fontSize="xs"
-                          color="whiteAlpha.700"
+                        <Checkbox.Root
+                          checked={horizontalClipEnabled.checked}
+                          onCheckedChange={(event) =>
+                            horizontalClipEnabled.setChecked(!!event.checked)
+                          }
                         >
-                          <Text>Красный = ширина (X)</Text>
-                          <Text>Зеленый = высота (Y)</Text>
-                          <Text>Синий = глубина (Z)</Text>
-                        </Stack>
-                      </Box>
-                    )}
-                  </Stack>
-                </Tabs.Content>
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                          <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
+                        </Checkbox.Root>
 
-                <Tabs.Content value="distanceMeasurement">
-                  <Stack gap="4">
-                    <Checkbox.Root
-                      checked={distanceMeasureEnabled}
-                      onCheckedChange={(event) => {
-                        const isEnabled = !!event.checked;
-                        setDistanceMeasureEnabled(isEnabled);
-                        if (!isEnabled) {
-                          resetDistanceMeasurement();
-                        }
-                      }}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>Измерение расстояния</Checkbox.Label>
-                    </Checkbox.Root>
-
-                    {distanceMeasureEnabled && (
-                      <Box
-                        p="4"
-                        rounded="xl"
-                        bg="whiteAlpha.50"
-                        border="1px solid"
-                        borderColor="whiteAlpha.100"
-                      >
-                        <Text
-                          fontSize="xs"
-                          color="whiteAlpha.700"
-                          lineHeight="1.5"
-                          mb="3"
-                        >
-                          Кликните на две точки модели для измерения расстояния
-                          между ними.
-                        </Text>
-
-                        {renderUnitSelect("Выберите ед. измерения")}
-
-                        {measuredDistance !== null && (
-                          <Box
-                            mt="3"
-                            rounded="lg"
-                            border="1px solid"
-                            borderColor="rgba(255, 85, 85, 0.5)"
-                            bg="rgba(255, 85, 85, 0.2)"
-                            px="3"
-                            py="2.5"
-                          >
-                            <Text fontSize="sm" fontWeight="semibold">
-                              Расстояние:{" "}
-                              {(
-                                measuredDistance *
-                                unitConversions[dimensionUnit].factor
-                              ).toFixed(2)}{" "}
-                              {unitConversions[dimensionUnit].label}
+                        {horizontalClipEnabled.checked && (
+                          <Box mt="2">
+                            <Slider.RootProvider
+                              value={horizontalSlider}
+                              width="100%"
+                            >
+                              <Slider.Control>
+                                <Slider.Track>
+                                  <Slider.Range />
+                                </Slider.Track>
+                                <Slider.Thumb index={0}>
+                                  <Slider.HiddenInput />
+                                </Slider.Thumb>
+                              </Slider.Control>
+                            </Slider.RootProvider>
+                            <Text mt="1" fontSize="xs" color="whiteAlpha.700">
+                              Позиция: {horizontalSlider.value[0].toFixed(4)}
                             </Text>
                           </Box>
                         )}
-
-                        <Button
-                          mt="3"
-                          width="100%"
-                          size="sm"
-                          variant="subtle"
-                          onClick={resetDistanceMeasurement}
-                        >
-                          Сбросить измерение
-                        </Button>
                       </Box>
-                    )}
-                  </Stack>
-                </Tabs.Content>
+
+                      <Box
+                        p="2"
+                        rounded="xl"
+                        bg="whiteAlpha.50"
+                        border="1px solid"
+                        borderColor="whiteAlpha.100"
+                      >
+                        <Checkbox.Root
+                          checked={verticalClipEnabled.checked}
+                          onCheckedChange={(event) =>
+                            verticalClipEnabled.setChecked(!!event.checked)
+                          }
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                          <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
+                        </Checkbox.Root>
+
+                        {verticalClipEnabled.checked && (
+                          <Box mt="2">
+                            <Slider.RootProvider
+                              value={verticalSlider}
+                              width="100%"
+                            >
+                              <Slider.Control>
+                                <Slider.Track>
+                                  <Slider.Range />
+                                </Slider.Track>
+                                <Slider.Thumb index={0}>
+                                  <Slider.HiddenInput />
+                                </Slider.Thumb>
+                              </Slider.Control>
+                            </Slider.RootProvider>
+                            <Text mt="1" fontSize="xs" color="whiteAlpha.700">
+                              Позиция: {verticalSlider.value[0].toFixed(4)}
+                            </Text>
+                          </Box>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Tabs.Content>
+
+                  <Tabs.Content value="dimensions">
+                    <Stack gap="4">
+                      <Checkbox.Root
+                        checked={dimensionsEnabled}
+                        onCheckedChange={(event) =>
+                          setDimensionsEnabled(!!event.checked)
+                        }
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Показать размеры модели</Checkbox.Label>
+                      </Checkbox.Root>
+
+                      {dimensionsEnabled && (
+                        <Box
+                          p="4"
+                          rounded="xl"
+                          bg="whiteAlpha.50"
+                          border="1px solid"
+                          borderColor="whiteAlpha.100"
+                        >
+                          {renderUnitSelect("Выберите ед. измерения")}
+                          <Stack
+                            mt="3"
+                            gap="1"
+                            fontSize="xs"
+                            color="whiteAlpha.700"
+                          >
+                            <Text>Красный = ширина (X)</Text>
+                            <Text>Зеленый = высота (Y)</Text>
+                            <Text>Синий = глубина (Z)</Text>
+                          </Stack>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Tabs.Content>
+
+                  <Tabs.Content value="distanceMeasurement">
+                    <Stack gap="4">
+                      <Checkbox.Root
+                        checked={distanceMeasureEnabled}
+                        onCheckedChange={(event) => {
+                          const isEnabled = !!event.checked;
+                          setDistanceMeasureEnabled(isEnabled);
+                          if (!isEnabled) {
+                            resetDistanceMeasurement();
+                          }
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Измерение расстояния</Checkbox.Label>
+                      </Checkbox.Root>
+
+                      {distanceMeasureEnabled && (
+                        <Box
+                          p="4"
+                          rounded="xl"
+                          bg="whiteAlpha.50"
+                          border="1px solid"
+                          borderColor="whiteAlpha.100"
+                        >
+                          <Text
+                            fontSize="xs"
+                            color="whiteAlpha.700"
+                            lineHeight="1.5"
+                            mb="3"
+                          >
+                            Кликните на две точки модели для измерения
+                            расстояния между ними.
+                          </Text>
+
+                          {renderUnitSelect("Выберите ед. измерения")}
+
+                          {measuredDistance !== null && (
+                            <Box
+                              mt="3"
+                              rounded="lg"
+                              border="1px solid"
+                              borderColor="rgba(255, 85, 85, 0.5)"
+                              bg="rgba(255, 85, 85, 0.2)"
+                              px="3"
+                              py="2.5"
+                            >
+                              <Text fontSize="sm" fontWeight="semibold">
+                                Расстояние:{" "}
+                                {(
+                                  measuredDistance *
+                                  unitConversions[dimensionUnit].factor
+                                ).toFixed(2)}{" "}
+                                {unitConversions[dimensionUnit].label}
+                              </Text>
+                            </Box>
+                          )}
+
+                          <Button
+                            mt="3"
+                            width="100%"
+                            size="sm"
+                            variant="subtle"
+                            onClick={resetDistanceMeasurement}
+                          >
+                            Сбросить измерение
+                          </Button>
+                        </Box>
+                      )}
+                    </Stack>
+                  </Tabs.Content>
+                </Box>
               </Tabs.Root>
             </Card.Body>
           </Card.Root>
@@ -1350,8 +1356,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
             >
               <Stack gap="3" w="full" maxW="220px" textAlign="center">
                 <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.5">
-                  Можно заменить текущую модель или в любой момент вернуть сцену
-                  к исходному виду.
+                  Можно заменить текущую модель или вернуть сцену к исходному
+                  виду.
                 </Text>
                 <Button
                   bg="#5A7FAF"
