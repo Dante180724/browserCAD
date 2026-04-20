@@ -80,7 +80,7 @@ function App() {
                 width: fileSystem ? "100%" : "460px",
                 height: fileSystem ? "100%" : "420px",
                 scale: fileSystem ? 1 : 0.96,
-                opacity: 1,
+                opacity: fileSystem ? 1 : 0.9,
               }}
               transition={{
                 duration: 0.35,
