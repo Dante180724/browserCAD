@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   Card,
-  Checkbox,
   createListCollection,
   HStack,
   IconButton,
@@ -23,7 +22,6 @@ import {
   Switch,
   useCheckbox,
   useSlider,
-  SwitchRoot,
 } from "@chakra-ui/react";
 import {
   FiBox,

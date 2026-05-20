@@ -11,6 +11,10 @@ const MotionBox = motion(Box);
 
 function App() {
   const [fileSystem, setFileSystem] = useState<VirtualFileSystem | null>(null);
+  const [isClosingViewer, setIsClosingViewer] = useState(false);
+
+  const isViewerVisible = !!fileSystem && !isClosingViewer;
+  const isUploadLayout = !isViewerVisible;
 
   const handleFilesSelect = (files: File[]) => {
     // Dispose of old file system if it exists
@@ -20,13 +24,13 @@ function App() {
 
     // Create new virtual file system
     const vfs = new VirtualFileSystem(files);
+    setIsClosingViewer(false);
     setFileSystem(vfs);
   };
 
   const handleReset = () => {
     if (fileSystem) {
-      fileSystem.dispose();
-      setFileSystem(null);
+      setIsClosingViewer(true);
     }
   };
 
@@ -38,7 +42,7 @@ function App() {
         </Box>
 
         <Flex position="relative" zIndex={1} direction="column" h="full">
-          {!fileSystem && (
+          {isUploadLayout && (
             <Box
               as="header"
               px={{ base: 6, md: 8 }}
@@ -68,31 +72,40 @@ function App() {
             as="main"
             flex="1"
             minH="0"
-            align={fileSystem ? "stretch" : "center"}
-            justify={fileSystem ? "stretch" : "center"}
-            px={fileSystem ? 0 : { base: 4, md: 8 }}
-            pb={fileSystem ? 0 : { base: 4, md: 8 }}
+            align={isUploadLayout ? "center" : "stretch"}
+            justify={isUploadLayout ? "center" : "stretch"}
+            px={isUploadLayout ? { base: 4, md: 8 } : 0}
+            pb={isUploadLayout ? { base: 4, md: 8 } : 0}
           >
             <MotionBox
               layout
               initial={false}
               animate={{
-                width: fileSystem ? "100%" : "460px",
-                height: fileSystem ? "100%" : "420px",
-                scale: fileSystem ? 1 : 0.96,
-                opacity: fileSystem ? 1 : 0.9,
+                width: isViewerVisible ? "100%" : "460px",
+                height: isViewerVisible ? "100%" : "420px",
+                scale: isViewerVisible ? 1 : 0.96,
+                opacity: isViewerVisible ? 1 : 0.9,
               }}
               transition={{
                 duration: 0.35,
                 ease: [0.4, 0, 0.2, 1],
               }}
-              w={fileSystem ? "full" : "460px"}
-              h={fileSystem ? "full" : "420px"}
-              maxW={fileSystem ? "none" : "460px"}
-              maxH={fileSystem ? "none" : "420px"}
-              bg={fileSystem ? "transparent" : "white"}
-              borderRadius={fileSystem ? "0" : "24px"}
-              boxShadow={fileSystem ? "none" : "0 20px 60px rgba(0, 0, 0, 0.3)"}
+              onAnimationComplete={() => {
+                if (isClosingViewer && fileSystem) {
+                  fileSystem.dispose();
+                  setFileSystem(null);
+                  setIsClosingViewer(false);
+                }
+              }}
+              w={isViewerVisible ? "full" : "460px"}
+              h={isViewerVisible ? "full" : "420px"}
+              maxW={isViewerVisible ? "none" : "460px"}
+              maxH={isViewerVisible ? "none" : "420px"}
+              bg={isViewerVisible ? "transparent" : "white"}
+              borderRadius={isViewerVisible ? "0" : "24px"}
+              boxShadow={
+                isViewerVisible ? "none" : "0 20px 60px rgba(0, 0, 0, 0.3)"
+              }
               overflow="hidden"
               display="flex"
               alignItems="stretch"
