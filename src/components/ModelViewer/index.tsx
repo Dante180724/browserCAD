@@ -1385,11 +1385,15 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               variant="ghost"
               size="lg"
               borderRadius="16px"
-              colorPalette={activeTab === "geometry" ? "green" : undefined}
-              bg={openPanelTab === "geometry" ? "#22c55e" : "transparent"}
+              bg={
+                openPanelTab === "geometry" ? "blackAlpha.900" : "transparent"
+              }
               color={openPanelTab === "geometry" ? "white" : "gray.700"}
               _hover={{
-                bg: openPanelTab === "geometry" ? "#22c55e" : "blackAlpha.50",
+                bg:
+                  openPanelTab === "geometry"
+                    ? "blackAlpha.900"
+                    : "blackAlpha.50",
               }}
               onClick={() => handleToolSelect("geometry")}
             >
