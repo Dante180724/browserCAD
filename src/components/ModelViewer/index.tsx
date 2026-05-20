@@ -228,7 +228,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
 
   const resetViewerState = () => {
     resetGeometryTransform();
-
+    resetToolModes();
     setTransformEnabled(false);
     setTransformMode("translate");
     setActiveTab("geometry");
@@ -266,6 +266,27 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       controlsRef.current.target.copy(initialViewStateRef.current.target);
       cameraRef.current.lookAt(initialViewStateRef.current.target);
       controlsRef.current.update();
+    }
+  };
+
+  const resetToolModes = () => {
+    setTransformEnabled(false);
+    setTransformMode("translate");
+    transformControlsRef.current?.detach();
+
+    horizontalClipEnabled.setChecked(false);
+    verticalClipEnabled.setChecked(false);
+    horizontalSlider.setValue([0]);
+    verticalSlider.setValue([0]);
+
+    setDimensionsEnabled(false);
+
+    setDistanceMeasureEnabled(false);
+    resetDistanceMeasurement();
+
+    const canvas = rendererRef.current?.domElement;
+    if (canvas) {
+      canvas.style.cursor = "grab";
     }
   };
 
@@ -945,8 +966,16 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   const currentModelName = fileSystem?.findModelFile()?.file.name;
 
   const handleToolSelect = (tab: ViewerTab) => {
+    if (openPanelTab === tab) {
+      resetToolModes();
+      setOpenPanelTab(null);
+      setActiveTab(tab);
+      return;
+    }
+
+    resetToolModes();
     setActiveTab(tab);
-    setOpenPanelTab((current) => (current === tab ? null : tab));
+    setOpenPanelTab(tab);
   };
 
   const renderActivePanelContent = () => {
