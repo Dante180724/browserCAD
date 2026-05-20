@@ -20,8 +20,10 @@ import {
   Slider,
   Stack,
   Text,
+  Switch,
   useCheckbox,
   useSlider,
+  SwitchRoot,
 } from "@chakra-ui/react";
 import {
   FiBox,
@@ -31,6 +33,7 @@ import {
   FiScissors,
   FiUpload,
 } from "react-icons/fi";
+import { HiCheck, HiX } from "react-icons/hi";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 interface ModelViewerProps {
@@ -983,16 +986,21 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       case "geometry":
         return (
           <Stack gap="4">
-            <Checkbox.Root
+            <Switch.Root
+              size="lg"
               checked={transformEnabled}
               onCheckedChange={(event) => setTransformEnabled(!!event.checked)}
             >
-              <Checkbox.HiddenInput />
-              <Checkbox.Control>
-                <Checkbox.Indicator />
-              </Checkbox.Control>
-              <Checkbox.Label>Изменение геометрии</Checkbox.Label>
-            </Checkbox.Root>
+              <Switch.HiddenInput />
+              <Switch.Control>
+                <Switch.Thumb>
+                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
+                    <HiCheck />
+                  </Switch.ThumbIndicator>
+                </Switch.Thumb>
+              </Switch.Control>
+              <Switch.Label>Изменение геометрии</Switch.Label>
+            </Switch.Root>
 
             {transformEnabled && (
               <Box w="full">
@@ -1048,16 +1056,23 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               border="1px solid"
               borderColor="blackAlpha.100"
             >
-              <Checkbox.Root
+              <Switch.Root
+                size="lg"
                 checked={horizontalClipEnabled.checked}
                 onCheckedChange={(event) =>
                   horizontalClipEnabled.setChecked(!!event.checked)
                 }
               >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control />
-                <Checkbox.Label>Горизонтальный разрез</Checkbox.Label>
-              </Checkbox.Root>
+                <Switch.HiddenInput />
+                <Switch.Control>
+                  <Switch.Thumb>
+                    <Switch.ThumbIndicator fallback={<HiX color="black" />}>
+                      <HiCheck />
+                    </Switch.ThumbIndicator>
+                  </Switch.Thumb>
+                </Switch.Control>
+                <Switch.Label>Горизонтальный разрез</Switch.Label>
+              </Switch.Root>
 
               {horizontalClipEnabled.checked && (
                 <Box mt="3">
@@ -1085,16 +1100,23 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               border="1px solid"
               borderColor="blackAlpha.100"
             >
-              <Checkbox.Root
+              <Switch.Root
+                size="lg"
                 checked={verticalClipEnabled.checked}
                 onCheckedChange={(event) =>
                   verticalClipEnabled.setChecked(!!event.checked)
                 }
               >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control />
-                <Checkbox.Label>Вертикальный разрез</Checkbox.Label>
-              </Checkbox.Root>
+                <Switch.HiddenInput />
+                <Switch.Control>
+                  <Switch.Thumb>
+                    <Switch.ThumbIndicator fallback={<HiX color="black" />}>
+                      <HiCheck />
+                    </Switch.ThumbIndicator>
+                  </Switch.Thumb>
+                </Switch.Control>
+                <Switch.Label>Вертикальный разрез</Switch.Label>
+              </Switch.Root>
 
               {verticalClipEnabled.checked && (
                 <Box mt="3">
@@ -1119,16 +1141,21 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       case "dimensions":
         return (
           <Stack gap="4">
-            <Checkbox.Root
+            <Switch.Root
+              size="lg"
               checked={dimensionsEnabled}
               onCheckedChange={(event) => setDimensionsEnabled(!!event.checked)}
             >
-              <Checkbox.HiddenInput />
-              <Checkbox.Control>
-                <Checkbox.Indicator />
-              </Checkbox.Control>
-              <Checkbox.Label>Показать размеры модели</Checkbox.Label>
-            </Checkbox.Root>
+              <Switch.HiddenInput />
+              <Switch.Control>
+                <Switch.Thumb>
+                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
+                    <HiCheck />
+                  </Switch.ThumbIndicator>
+                </Switch.Thumb>
+              </Switch.Control>
+              <Switch.Label>Показать размеры модели</Switch.Label>
+            </Switch.Root>
 
             {dimensionsEnabled && (
               <Box
@@ -1151,7 +1178,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       case "distanceMeasurement":
         return (
           <Stack gap="4">
-            <Checkbox.Root
+            <Switch.Root
+              size="lg"
               checked={distanceMeasureEnabled}
               onCheckedChange={(event) => {
                 const isEnabled = !!event.checked;
@@ -1161,12 +1189,16 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                 }
               }}
             >
-              <Checkbox.HiddenInput />
-              <Checkbox.Control>
-                <Checkbox.Indicator />
-              </Checkbox.Control>
-              <Checkbox.Label>Измерение расстояния</Checkbox.Label>
-            </Checkbox.Root>
+              <Switch.HiddenInput />
+              <Switch.Control>
+                <Switch.Thumb>
+                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
+                    <HiCheck />
+                  </Switch.ThumbIndicator>
+                </Switch.Thumb>
+              </Switch.Control>
+              <Switch.Label>Измерение расстояния</Switch.Label>
+            </Switch.Root>
 
             {distanceMeasureEnabled && (
               <Box
