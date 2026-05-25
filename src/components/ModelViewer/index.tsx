@@ -59,6 +59,9 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const [canvasElement, setCanvasElement] = useState<HTMLCanvasElement | null>(
+    null,
+  );
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const currentModelRef = useRef<THREE.Group | null>(null);
@@ -185,6 +188,16 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     distanceLabelRef.current = labelObject;
   };
 
+  const [selectedObjectInfo, setSelectedObjectInfo] = useState<{
+    name: string;
+    type: string;
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+    size: { x: number; y: number; z: number };
+  } | null>(null);
+
+  const selectedObjectRef = useRef<THREE.Object3D | null>(null);
   // Reset distance measurement
   const resetDistanceMeasurement = () => {
     clickCountRef.current = 0;
@@ -481,22 +494,93 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     }
   };
 
+  const handleSelectionClick = (event: MouseEvent) => {
+    if (!containerRef.current || !cameraRef.current || !sceneRef.current)
+      return;
+    if (!currentModelRef.current) return;
+
+    // Пока selection не должен работать в режиме измерения расстояния
+    if (distanceMeasureEnabled) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+
+    const mouse = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, cameraRef.current);
+
+    const intersects = raycaster.intersectObject(currentModelRef.current, true);
+
+    // Снимаем старую подсветку
+    clearSelectionHighlight();
+
+    if (intersects.length === 0) {
+      return;
+    }
+
+    const clickedObject = intersects[0].object;
+
+    // Обычно берём Mesh, но можно подниматься к родителю при необходимости
+    selectedObjectRef.current = clickedObject;
+    applySelectionHighlight(clickedObject);
+
+    const box = new THREE.Box3().setFromObject(clickedObject);
+    const size = box.getSize(new THREE.Vector3());
+
+    setSelectedObjectInfo({
+      name: clickedObject.name || "Без имени",
+      type: clickedObject.type,
+      position: {
+        x: clickedObject.position.x,
+        y: clickedObject.position.y,
+        z: clickedObject.position.z,
+      },
+      rotation: {
+        x: clickedObject.rotation.x,
+        y: clickedObject.rotation.y,
+        z: clickedObject.rotation.z,
+      },
+      scale: {
+        x: clickedObject.scale.x,
+        y: clickedObject.scale.y,
+        z: clickedObject.scale.z,
+      },
+      size: {
+        x: size.x,
+        y: size.y,
+        z: size.z,
+      },
+    });
+  };
+
   // Effect for distance measurement click handler
   useEffect(() => {
-    const canvas = rendererRef.current?.domElement;
-    if (!canvas) return;
+    if (!canvasElement) return;
 
     if (distanceMeasureEnabled) {
-      canvas.addEventListener("click", handleDistanceClick);
-      canvas.style.cursor = "crosshair";
+      canvasElement.addEventListener("click", handleDistanceClick);
+      canvasElement.style.cursor = "crosshair";
     } else {
-      canvas.style.cursor = "grab";
+      canvasElement.style.cursor = "grab";
     }
 
     return () => {
-      canvas.removeEventListener("click", handleDistanceClick);
+      canvasElement.removeEventListener("click", handleDistanceClick);
     };
-  }, [distanceMeasureEnabled, dimensionUnit]);
+  }, [canvasElement, distanceMeasureEnabled, dimensionUnit]);
+
+  useEffect(() => {
+    if (!canvasElement) return;
+
+    canvasElement.addEventListener("click", handleSelectionClick);
+
+    return () => {
+      canvasElement.removeEventListener("click", handleSelectionClick);
+    };
+  }, [canvasElement, distanceMeasureEnabled, fileSystem]);
 
   // Update label when unit changes
   useEffect(() => {
@@ -546,6 +630,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
 
     container.appendChild(canvas);
     rendererRef.current = renderer;
+    setCanvasElement(canvas);
 
     // CSS2D Renderer setup for labels
     const labelRenderer = new CSS2DRenderer();
@@ -693,6 +778,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
       controls.dispose();
+      setCanvasElement(null);
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
       }
@@ -851,6 +937,50 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     };
   }, [fileSystem]);
 
+  const clearSelectionHighlight = () => {
+    const selected = selectedObjectRef.current;
+
+    if (!selected) return;
+
+    selected.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+
+        materials.forEach((mat) => {
+          if (
+            "emissive" in mat &&
+            mat.userData?.originalEmissive !== undefined
+          ) {
+            mat.emissive.setHex(mat.userData.originalEmissive);
+          }
+        });
+      }
+    });
+
+    selectedObjectRef.current = null;
+    setSelectedObjectInfo(null);
+  };
+
+  const applySelectionHighlight = (object: THREE.Object3D) => {
+    object.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+
+        materials.forEach((mat) => {
+          if ("emissive" in mat) {
+            if (mat.userData.originalEmissive === undefined) {
+              mat.userData.originalEmissive = mat.emissive.getHex();
+            }
+            mat.emissive.setHex(0x3355ff);
+          }
+        });
+      }
+    });
+  };
   // Create dimension line with arrows and label
   const createDimensionLine = (
     start: THREE.Vector3,
@@ -1437,6 +1567,79 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               </Text>
             </Card.Header>
             <Card.Body pt="1">{renderActivePanelContent()}</Card.Body>
+          </Card.Root>
+        </Box>
+      )}
+
+      {selectedObjectInfo && (
+        <Box
+          position="absolute"
+          top="2%"
+          right={{ base: "12px", md: "16px" }}
+          zIndex={3}
+          w={{ base: "280px", md: "320px" }}
+          maxW="calc(100% - 24px)"
+          pointerEvents="none"
+        >
+          <Card.Root
+            bg="rgba(255, 255, 255, 0.96)"
+            color="gray.800"
+            border="1px solid"
+            borderColor="blackAlpha.100"
+            boxShadow="0 18px 44px rgba(15, 23, 42, 0.18)"
+            borderRadius="22px"
+            overflow="hidden"
+            pointerEvents="auto"
+          >
+            <Card.Header pb="2">
+              <Text fontSize="sm" fontWeight="600">
+                Свойства объекта
+              </Text>
+            </Card.Header>
+
+            <Card.Body pt="1">
+              <Stack gap="2" fontSize="sm">
+                <Text>
+                  <b>Имя:</b> {selectedObjectInfo.name}
+                </Text>
+
+                <Text>
+                  <b>Тип:</b> {selectedObjectInfo.type}
+                </Text>
+
+                <Text>
+                  <b>Позиция:</b> {selectedObjectInfo.position.x.toFixed(2)},{" "}
+                  {selectedObjectInfo.position.y.toFixed(2)},{" "}
+                  {selectedObjectInfo.position.z.toFixed(2)}
+                </Text>
+
+                <Text>
+                  <b>Поворот:</b> {selectedObjectInfo.rotation.x.toFixed(2)},{" "}
+                  {selectedObjectInfo.rotation.y.toFixed(2)},{" "}
+                  {selectedObjectInfo.rotation.z.toFixed(2)}
+                </Text>
+
+                <Text>
+                  <b>Масштаб:</b> {selectedObjectInfo.scale.x.toFixed(2)},{" "}
+                  {selectedObjectInfo.scale.y.toFixed(2)},{" "}
+                  {selectedObjectInfo.scale.z.toFixed(2)}
+                </Text>
+
+                <Text>
+                  <b>Габариты:</b> {selectedObjectInfo.size.x.toFixed(2)} ×{" "}
+                  {selectedObjectInfo.size.y.toFixed(2)} ×{" "}
+                  {selectedObjectInfo.size.z.toFixed(2)}
+                </Text>
+
+                <Button
+                  size="sm"
+                  variant="subtle"
+                  onClick={clearSelectionHighlight}
+                >
+                  Снять выделение
+                </Button>
+              </Stack>
+            </Card.Body>
           </Card.Root>
         </Box>
       )}
