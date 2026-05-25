@@ -1,6 +1,14 @@
 import { useRef, useState } from "react";
 import { ImDownload } from "react-icons/im";
-import { Box, Button, Flex, Heading, Icon, Input, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Icon,
+  Input,
+  Text,
+} from "@chakra-ui/react";
 
 interface FileUploadProps {
   onFilesSelect: (files: File[]) => void;
@@ -16,7 +24,10 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
 
     // Check if there's at least one .gltf or .glb file
     const hasModelFile = fileArray.some(
-      (f) => f.name.endsWith(".gltf") || f.name.endsWith(".glb"),
+      (f) =>
+        f.name.endsWith(".gltf") ||
+        f.name.endsWith(".glb") ||
+        f.name.endsWith(".stl"),
     );
 
     if (hasModelFile) {
@@ -166,7 +177,13 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
         <Heading size="xl" color="gray.800">
           Загрузите 3D модель
         </Heading>
-        <Text mt="3" fontSize="md" color="gray.600" maxW="420px" lineHeight="1.6">
+        <Text
+          mt="3"
+          fontSize="md"
+          color="gray.600"
+          maxW="420px"
+          lineHeight="1.6"
+        >
           Перетащите папку с моделью сюда или выберите удобный способ загрузки.
         </Text>
       </Box>

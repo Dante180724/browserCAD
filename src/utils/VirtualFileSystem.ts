@@ -6,14 +6,14 @@ export interface FileData {
 
 export class VirtualFileSystem {
   private files: Map<string, FileData> = new Map();
-  private baseUrl = 'virtual://';
+  private baseUrl = "virtual://";
 
   constructor(files: File[]) {
     this.loadFiles(files);
   }
 
   private loadFiles(files: File[]) {
-    files.forEach(file => {
+    files.forEach((file) => {
       // Get the relative path from the file
       // For files from a folder upload, webkitRelativePath contains the path
       const path = file.webkitRelativePath || file.name;
@@ -24,7 +24,7 @@ export class VirtualFileSystem {
       this.files.set(path, fileData);
 
       // Also index by filename for easier lookup
-      const filename = path.split('/').pop() || path;
+      const filename = path.split("/").pop() || path;
       if (filename !== path) {
         this.files.set(filename, fileData);
       }
@@ -37,7 +37,7 @@ export class VirtualFileSystem {
     if (fileData) return fileData;
 
     // Try to find by filename only
-    const filename = pathOrUrl.split('/').pop() || pathOrUrl;
+    const filename = pathOrUrl.split("/").pop() || pathOrUrl;
     fileData = this.files.get(filename);
     if (fileData) return fileData;
 
@@ -58,7 +58,11 @@ export class VirtualFileSystem {
 
   findModelFile(): FileData | null {
     for (const [path, data] of this.files.entries()) {
-      if (path.endsWith('.gltf') || path.endsWith('.glb')) {
+      if (
+        path.endsWith(".gltf") ||
+        path.endsWith(".glb") ||
+        path.endsWith(".stl")
+      ) {
         return data;
       }
     }
@@ -68,7 +72,7 @@ export class VirtualFileSystem {
   dispose() {
     // Clean up all blob URLs
     for (const data of this.files.values()) {
-      if (data.url.startsWith('blob:')) {
+      if (data.url.startsWith("blob:")) {
         URL.revokeObjectURL(data.url);
       }
     }
@@ -76,8 +80,8 @@ export class VirtualFileSystem {
   }
 
   getAllFiles(): FileData[] {
-    return Array.from(this.files.values()).filter(data =>
-      !data.url.startsWith(this.baseUrl)
+    return Array.from(this.files.values()).filter(
+      (data) => !data.url.startsWith(this.baseUrl),
     );
   }
 }

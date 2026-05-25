@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   CSS2DRenderer,
@@ -204,6 +205,131 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       sceneRef.current.remove(distanceLabelRef.current);
       distanceLabelRef.current = null;
     }
+  };
+
+  const finalizeLoadedModel = (model: THREE.Group) => {
+    if (!sceneRef.current) return;
+
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    model.position.sub(center);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const safeMaxDim = maxDim > 0 ? maxDim : 1;
+
+    const scale = 3 / safeMaxDim;
+    model.scale.multiplyScalar(scale);
+
+    model.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+
+        if (child.material) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+
+          materials.forEach((mat) => {
+            mat.clippingPlanes = [];
+            mat.clipShadows = true;
+            mat.needsUpdate = true;
+          });
+        }
+      }
+    });
+
+    sceneRef.current.add(model);
+    currentModelRef.current = model;
+
+    if (transformControlsRef.current) {
+      transformControlsRef.current.detach();
+    }
+
+    if (cameraRef.current && controlsRef.current) {
+      const distance = safeMaxDim * scale * 2;
+
+      cameraRef.current.position.set(distance, distance, distance);
+      cameraRef.current.lookAt(0, 0, 0);
+      controlsRef.current.target.set(0, 0, 0);
+      controlsRef.current.update();
+      controlsRef.current.saveState();
+
+      initialViewStateRef.current = {
+        cameraPosition: cameraRef.current.position.clone(),
+        target: controlsRef.current.target.clone(),
+      };
+    }
+
+    initialTransformRef.current = {
+      position: model.position.clone(),
+      quaternion: model.quaternion.clone(),
+      scale: model.scale.clone(),
+    };
+  };
+
+  const loadStlModel = (
+    modelUrl: string,
+    onDone?: () => void,
+    onError?: (error: unknown) => void,
+  ) => {
+    const loader = new STLLoader();
+
+    loader.load(
+      modelUrl,
+      (geometry) => {
+        // 1. Обязательно нормали
+        geometry.computeVertexNormals();
+
+        // 2. Создаём материал
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xb0b0b0,
+          metalness: 0.05,
+          roughness: 0.8,
+        });
+
+        // 3. Создаём Mesh
+        const mesh = new THREE.Mesh(geometry, material);
+
+        // 4. Оборачиваем в Group (ВАЖНО!)
+        const model = new THREE.Group();
+        model.add(mesh);
+
+        // 5. Передаём в общую логику post-processing
+        finalizeLoadedModel(model);
+
+        onDone?.();
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading STL model:", error);
+        onError?.(error);
+      },
+    );
+  };
+
+  const loadGltfOrGlbModel = (
+    modelUrl: string,
+    onDone?: () => void,
+    onError?: (error: unknown) => void,
+  ) => {
+    const loader = new GLTFLoader();
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        const model = gltf.scene;
+        finalizeLoadedModel(model);
+        onDone?.();
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading model:", error);
+        onError?.(error);
+      },
+    );
   };
 
   const resetGeometryTransform = () => {
@@ -607,6 +733,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
 
     // Find the model file
     const modelFile = fileSystem.findModelFile();
+
     if (!modelFile) {
       console.error("No .gltf or .glb file found");
       return;
@@ -615,11 +742,15 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     const loadModel = async () => {
       let modelBlobUrl: string;
       let shouldCleanupModelUrl = false;
+      const fileName = modelFile.file.name.toLowerCase();
+      const isGlb = fileName.endsWith(".glb");
+      const isGltf = fileName.endsWith(".gltf");
+      const isStl = fileName.endsWith(".stl");
 
       // For .glb files, load directly using cached blob URL
-      if (modelFile.file.name.endsWith(".glb")) {
+      if (isGlb || isStl) {
         modelBlobUrl = modelFile.url;
-      } else {
+      } else if (isGltf) {
         // For .gltf files, we need to modify the JSON to replace paths with blob URLs
         const gltfText = await modelFile.file.text();
         const gltfJson = JSON.parse(gltfText) as GltfJson;
@@ -672,86 +803,35 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
         });
         modelBlobUrl = URL.createObjectURL(modifiedBlob);
         shouldCleanupModelUrl = true; // We created this URL, so clean it up
+      } else {
+        console.error("Unsupported model format:", modelFile.file.name);
+        return;
       }
 
-      // Load the model
-      const loader = new GLTFLoader();
-      loader.load(
-        modelBlobUrl,
-        (gltf) => {
-          if (cancelled) return;
-
-          const model = gltf.scene;
-
-          // Center the model
-          const box = new THREE.Box3().setFromObject(model);
-          const size = box.getSize(new THREE.Vector3());
-          const center = box.getCenter(new THREE.Vector3());
-
-          model.position.sub(center);
-
-          // Scale model to fit in view
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 3 / maxDim;
-          model.scale.multiplyScalar(scale);
-
-          // Enable shadows and apply clipping planes
-          model.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-
-              // Apply clipping planes to material
-              if (child.material) {
-                // Handle both single material and array of materials
-                const materials = Array.isArray(child.material)
-                  ? child.material
-                  : [child.material];
-                materials.forEach((mat) => {
-                  mat.clippingPlanes = [];
-                  mat.clipShadows = true;
-                });
-              }
+      if (isStl) {
+        loadStlModel(
+          modelBlobUrl,
+          () => {
+            if (shouldCleanupModelUrl) {
+              URL.revokeObjectURL(modelBlobUrl);
             }
-          });
-
-          sceneRef.current?.add(model);
-          currentModelRef.current = model;
-
-          initialTransformRef.current = {
-            position: model.position.clone(),
-            quaternion: model.quaternion.clone(),
-            scale: model.scale.clone(),
-          };
-          if (transformControlsRef.current) {
-            transformControlsRef.current.detach();
-          }
-
-          // Reset camera and controls to look at the model
-          if (cameraRef.current && controlsRef.current) {
-            // Position camera at a good distance based on model size
-            const distance = maxDim * scale * 2;
-            cameraRef.current.position.set(distance, distance, distance);
-            cameraRef.current.lookAt(0, 0, 0);
-            controlsRef.current.target.set(0, 0, 0);
-            controlsRef.current.update();
-            controlsRef.current.saveState();
-            initialViewStateRef.current = {
-              cameraPosition: cameraRef.current.position.clone(),
-              target: controlsRef.current.target.clone(),
-            };
-          }
-
-          // Only revoke if we created this URL (for modified .gltf)
+          },
+          () => {
+            if (shouldCleanupModelUrl) {
+              URL.revokeObjectURL(modelBlobUrl);
+            }
+          },
+        );
+        return;
+      }
+      loadGltfOrGlbModel(
+        modelBlobUrl,
+        () => {
           if (shouldCleanupModelUrl) {
             URL.revokeObjectURL(modelBlobUrl);
           }
         },
-        undefined,
-        (error) => {
-          console.error("Error loading model:", error);
-
-          // Only revoke if we created this URL (for modified .gltf)
+        () => {
           if (shouldCleanupModelUrl) {
             URL.revokeObjectURL(modelBlobUrl);
           }
@@ -759,8 +839,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       );
     };
 
+    // Load the model
     loadModel();
-
     return () => {
       cancelled = true;
     };
@@ -1322,7 +1402,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
         <Box
           position="absolute"
           top="2%"
-          left="17%"
+          left={{ base: "17%" }}
           bottom={{ base: "92px", md: "104px" }}
           transform="translateX(-50%)"
           w={{ base: "calc(100% - 24px)", sm: "420px", md: "460px" }}
