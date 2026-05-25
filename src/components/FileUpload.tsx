@@ -22,7 +22,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
   const processFiles = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
 
-    // Check if there's at least one .gltf or .glb file
+    // Check if there's at least one supported model file
     const hasModelFile = fileArray.some(
       (f) =>
         f.name.endsWith(".gltf") ||
@@ -33,7 +33,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
     if (hasModelFile) {
       onFilesSelect(fileArray);
     } else {
-      alert("Пожалуйста, выберите папку с .gltf или .glb файлом");
+      alert("Пожалуйста, выберите .gltf, .glb или .stl модель");
     }
   };
 
@@ -147,7 +147,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
       <Input
         ref={fileInputRef}
         type="file"
-        accept=".gltf,.glb"
+        accept=".gltf,.glb,.stl"
         onChange={handleFileChange}
         display="none"
       />
@@ -241,7 +241,7 @@ export function FileUpload({ onFilesSelect }: FileUploadProps) {
           }}
           onClick={handleFileClick}
         >
-          Один .glb файл
+          Один .glb / .stl файл
         </Button>
       </Box>
     </Flex>

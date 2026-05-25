@@ -72,7 +72,6 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     "translate" | "rotate" | "scale"
   >("translate");
   const [transformEnabled, setTransformEnabled] = useState(false);
-  const [activeTab, setActiveTab] = useState<ViewerTab>("geometry");
   const [openPanelTab, setOpenPanelTab] = useState<ViewerTab | null>(null);
 
   // Clipping planes state
@@ -282,6 +281,15 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       (geometry) => {
         // 1. Обязательно нормали
         geometry.computeVertexNormals();
+        geometry.computeBoundingBox();
+
+        const box = geometry.boundingBox;
+        if (box) {
+          const center = new THREE.Vector3();
+          box.getCenter(center);
+
+          geometry.translate(-center.x, -center.y, -center.z);
+        }
 
         // 2. Создаём материал
         const material = new THREE.MeshStandardMaterial({
@@ -358,7 +366,6 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     resetToolModes();
     setTransformEnabled(false);
     setTransformMode("translate");
-    setActiveTab("geometry");
     setOpenPanelTab(null);
 
     horizontalClipEnabled.setChecked(false);
@@ -720,8 +727,6 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     }
     if (!fileSystem || !sceneRef.current) return;
 
-    let cancelled = false;
-
     // Remove previous model
     if (currentModelRef.current) {
       if (transformControlsRef.current) {
@@ -842,7 +847,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     // Load the model
     loadModel();
     return () => {
-      cancelled = true;
+      // no-op
     };
   }, [fileSystem]);
 
@@ -1050,12 +1055,10 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     if (openPanelTab === tab) {
       resetToolModes();
       setOpenPanelTab(null);
-      setActiveTab(tab);
       return;
     }
 
     resetToolModes();
-    setActiveTab(tab);
     setOpenPanelTab(tab);
   };
 
