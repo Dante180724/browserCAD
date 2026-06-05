@@ -1526,7 +1526,6 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
         position="absolute"
         inset="0"
         overflow="hidden"
-        borderRadius={{ base: "14px", md: "18px" }}
         bg="#f5f5f5"
         boxShadow="inset 0 0 0 1px rgba(255, 255, 255, 0.08)"
       />
@@ -1534,8 +1533,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       {openPanelTab && (
         <Box
           position="absolute"
-          top="2%"
-          left={{ base: "17%" }}
+          top="2vh"
+          left={{ base: "17vw" }}
           bottom={{ base: "92px", md: "104px" }}
           transform="translateX(-50%)"
           w={{ base: "calc(100% - 24px)", sm: "420px", md: "460px" }}
