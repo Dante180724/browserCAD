@@ -120,6 +120,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   const distanceLineRef = useRef<THREE.Line | null>(null);
   const distanceLabelRef = useRef<CSS2DObject | null>(null);
   const transformControlsRef = useRef<TransformControls | null>(null);
+  const transformDraggingRef = useRef(false);
+  const suppressSelectionUntilRef = useRef(0);
   const initialTransformRef = useRef<{
     position: THREE.Vector3;
     quaternion: THREE.Quaternion;
@@ -499,8 +501,12 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
       return;
     if (!currentModelRef.current) return;
 
-    // Пока selection не должен работать в режиме измерения расстояния
-    if (distanceMeasureEnabled) return;
+    // Selection should not react to transform manipulator clicks/drags.
+    if (
+      distanceMeasureEnabled ||
+      Date.now() < suppressSelectionUntilRef.current
+    )
+      return;
 
     const rect = containerRef.current.getBoundingClientRect();
 
@@ -675,9 +681,16 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
 
     // Отключаем OrbitControls при трансформации
     transformControls.addEventListener("dragging-changed", (event) => {
+      const isDragging = Boolean(event.value);
+
       if (controlsRef.current) {
-        controlsRef.current.enabled = !event.value;
+        controlsRef.current.enabled = !isDragging;
       }
+
+      if (!isDragging && transformDraggingRef.current) {
+        suppressSelectionUntilRef.current = Date.now() + 250;
+      }
+      transformDraggingRef.current = isDragging;
     });
 
     scene.add(transformControls.getHelper());
@@ -1534,9 +1547,9 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
         <Box
           position="absolute"
           top="2vh"
-          left={{ base: "17vw" }}
+          left="clamp(12px, 5vw, calc((100vw - 4000px) / 2))"
           bottom={{ base: "92px", md: "104px" }}
-          transform="translateX(-50%)"
+        
           w={{ base: "calc(100% - 24px)", sm: "420px", md: "460px" }}
           zIndex={3}
           pointerEvents="none"
