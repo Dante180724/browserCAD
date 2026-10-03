@@ -1,0 +1,9 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Секреты и данные
+.env
+storage/
+samples/

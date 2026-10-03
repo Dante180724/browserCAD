@@ -1,0 +1,20 @@
+[Unit]
+Description=browserCAD backend: Flask (gunicorn)
+After=network.target redis-server.service
+
+[Service]
+User=browsercad
+Group=browsercad
+WorkingDirectory=/srv/browsercad-backend
+EnvironmentFile=/srv/browsercad-backend/.env
+ExecStart=/srv/browsercad-backend/venv/bin/gunicorn \
+    --workers 2 \
+    --worker-class gthread \
+    --threads 8 \
+    --timeout 60 \
+    --bind 127.0.0.1:8000 \
+    wsgi:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

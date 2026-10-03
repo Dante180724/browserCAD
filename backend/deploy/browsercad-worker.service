@@ -1,0 +1,20 @@
+[Unit]
+Description=browserCAD backend: Celery worker (OCP)
+After=network.target redis-server.service
+
+[Service]
+User=browsercad
+Group=browsercad
+WorkingDirectory=/srv/browsercad-backend
+EnvironmentFile=/srv/browsercad-backend/.env
+# --max-tasks-per-child=20: рециркуляция воркеров против тихой утечки
+# нативной памяти OCP. Без --preload: нативные либы + fork = лотерея.
+ExecStart=/srv/browsercad-backend/venv/bin/celery \
+    -A app.tasks.celery_app worker \
+    --loglevel=INFO \
+    --concurrency=2 \
+    --max-tasks-per-child=20
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
