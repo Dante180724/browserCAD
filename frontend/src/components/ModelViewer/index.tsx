@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -32,7 +32,6 @@ import {
   FiScissors,
   FiUpload,
 } from "react-icons/fi";
-import { HiCheck, HiX } from "react-icons/hi";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 interface ModelViewerProps {
@@ -55,6 +54,84 @@ type ViewerTab =
   | "dimensions"
   | "distanceMeasurement";
 
+type TransformMode = "translate" | "rotate" | "scale";
+
+interface GeometryPanelProps {
+  transformEnabled: boolean;
+  transformMode: TransformMode;
+  onTransformEnabledChange: (enabled: boolean) => void;
+  onTransformModeChange: (mode: TransformMode) => void;
+  onReset: () => void;
+}
+
+const GeometryPanel = memo(function GeometryPanel({
+  transformEnabled,
+  transformMode,
+  onTransformEnabledChange,
+  onTransformModeChange,
+  onReset,
+}: GeometryPanelProps) {
+  return (
+    <Stack gap="4">
+      <Switch.Root
+        size="lg"
+        checked={transformEnabled}
+        onCheckedChange={(event) =>
+          onTransformEnabledChange(!!event.checked)
+        }
+        variant="solid"
+      >
+        <Switch.HiddenInput />
+        <Switch.Control />
+        <Switch.Label>Изменение геометрии</Switch.Label>
+      </Switch.Root>
+
+      {transformEnabled && (
+        <Box w="full">
+          <HStack w="full" align="stretch" gap="3">
+            <Button
+              size="md"
+              variant={transformMode === "translate" ? "solid" : "subtle"}
+              onClick={() => onTransformModeChange("translate")}
+              flex="1"
+              minW="0"
+            >
+              Перемещение
+            </Button>
+            <Button
+              size="md"
+              variant={transformMode === "rotate" ? "solid" : "subtle"}
+              onClick={() => onTransformModeChange("rotate")}
+              flex="1"
+              minW="0"
+            >
+              Вращение
+            </Button>
+            <Button
+              size="md"
+              variant={transformMode === "scale" ? "solid" : "subtle"}
+              onClick={() => onTransformModeChange("scale")}
+              flex="1"
+              minW="0"
+            >
+              Масштаб
+            </Button>
+          </HStack>
+          <Button
+            size="sm"
+            variant="surface"
+            w="full"
+            onClick={onReset}
+            mt="3"
+          >
+            Сбросить
+          </Button>
+        </Box>
+      )}
+    </Stack>
+  );
+});
+
 export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -71,9 +148,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   } | null>(null);
 
   //Transform module state
-  const [transformMode, setTransformMode] = useState<
-    "translate" | "rotate" | "scale"
-  >("translate");
+  const [transformMode, setTransformMode] =
+    useState<TransformMode>("translate");
   const [transformEnabled, setTransformEnabled] = useState(false);
   const [openPanelTab, setOpenPanelTab] = useState<ViewerTab | null>(null);
 
@@ -355,7 +431,15 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     );
   };
 
-  const resetGeometryTransform = () => {
+  const handleTransformEnabledChange = useCallback((enabled: boolean) => {
+    setTransformEnabled(enabled);
+  }, []);
+
+  const handleTransformModeChange = useCallback((mode: TransformMode) => {
+    setTransformMode(mode);
+  }, []);
+
+  const resetGeometryTransform = useCallback(() => {
     if (!currentModelRef.current || !initialTransformRef.current) return;
 
     const model = currentModelRef.current;
@@ -374,7 +458,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     }
 
     controlsRef.current?.update();
-  };
+  }, [transformEnabled]);
 
   const resetViewerState = () => {
     resetGeometryTransform();
@@ -1209,66 +1293,13 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
     switch (openPanelTab) {
       case "geometry":
         return (
-          <Stack gap="4">
-            <Switch.Root
-              size="lg"
-              checked={transformEnabled}
-              onCheckedChange={(event) => setTransformEnabled(!!event.checked)}
-            >
-              <Switch.HiddenInput />
-              <Switch.Control>
-                <Switch.Thumb>
-                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
-                    <HiCheck />
-                  </Switch.ThumbIndicator>
-                </Switch.Thumb>
-              </Switch.Control>
-              <Switch.Label>Изменение геометрии</Switch.Label>
-            </Switch.Root>
-
-            {transformEnabled && (
-              <Box w="full">
-                <HStack w="full" align="stretch" gap="3">
-                  <Button
-                    size="md"
-                    variant={transformMode === "translate" ? "solid" : "subtle"}
-                    onClick={() => setTransformMode("translate")}
-                    flex="1"
-                    minW="0"
-                  >
-                    Перемещение
-                  </Button>
-                  <Button
-                    size="md"
-                    variant={transformMode === "rotate" ? "solid" : "subtle"}
-                    onClick={() => setTransformMode("rotate")}
-                    flex="1"
-                    minW="0"
-                  >
-                    Вращение
-                  </Button>
-                  <Button
-                    size="md"
-                    variant={transformMode === "scale" ? "solid" : "subtle"}
-                    onClick={() => setTransformMode("scale")}
-                    flex="1"
-                    minW="0"
-                  >
-                    Масштаб
-                  </Button>
-                </HStack>
-                <Button
-                  size="sm"
-                  variant="surface"
-                  w="full"
-                  onClick={resetGeometryTransform}
-                  mt="3"
-                >
-                  Сбросить
-                </Button>
-              </Box>
-            )}
-          </Stack>
+          <GeometryPanel
+            transformEnabled={transformEnabled}
+            transformMode={transformMode}
+            onTransformEnabledChange={handleTransformEnabledChange}
+            onTransformModeChange={handleTransformModeChange}
+            onReset={resetGeometryTransform}
+          />
         );
       case "clippingPanels":
         return (
@@ -1288,13 +1319,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                 }
               >
                 <Switch.HiddenInput />
-                <Switch.Control>
-                  <Switch.Thumb>
-                    <Switch.ThumbIndicator fallback={<HiX color="black" />}>
-                      <HiCheck />
-                    </Switch.ThumbIndicator>
-                  </Switch.Thumb>
-                </Switch.Control>
+                <Switch.Control />
                 <Switch.Label>Горизонтальный разрез</Switch.Label>
               </Switch.Root>
 
@@ -1332,13 +1357,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
                 }
               >
                 <Switch.HiddenInput />
-                <Switch.Control>
-                  <Switch.Thumb>
-                    <Switch.ThumbIndicator fallback={<HiX color="black" />}>
-                      <HiCheck />
-                    </Switch.ThumbIndicator>
-                  </Switch.Thumb>
-                </Switch.Control>
+                <Switch.Control />
                 <Switch.Label>Вертикальный разрез</Switch.Label>
               </Switch.Root>
 
@@ -1371,13 +1390,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               onCheckedChange={(event) => setDimensionsEnabled(!!event.checked)}
             >
               <Switch.HiddenInput />
-              <Switch.Control>
-                <Switch.Thumb>
-                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
-                    <HiCheck />
-                  </Switch.ThumbIndicator>
-                </Switch.Thumb>
-              </Switch.Control>
+              <Switch.Control />
               <Switch.Label>Показать размеры модели</Switch.Label>
             </Switch.Root>
 
@@ -1414,13 +1427,7 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
               }}
             >
               <Switch.HiddenInput />
-              <Switch.Control>
-                <Switch.Thumb>
-                  <Switch.ThumbIndicator fallback={<HiX color="black" />}>
-                    <HiCheck />
-                  </Switch.ThumbIndicator>
-                </Switch.Thumb>
-              </Switch.Control>
+              <Switch.Control />
               <Switch.Label>Измерение расстояния</Switch.Label>
             </Switch.Root>
 
