@@ -8,7 +8,8 @@ in docstrings — don't implement those TODOs unless explicitly asked. Backend r
 from `backend/` with its own `.venv` (Python 3.14, `cadquery-ocp==8.0.1.0.0`,
 module import name is `OCP`; in OCP 8.x the glTF writer is `RWGltf_CafWriter`,
 not `RWGltf_CAFWriter`). Deploy files are in `backend/deploy/` (manual SSH deploy,
-not wired to the GitHub Action).
+not wired to the GitHub Action). Full backend design doc: `backend/README.md`
+(the canonical source for architecture, API, anti-bug rules and roadmap).
 
 ## Commands
 
