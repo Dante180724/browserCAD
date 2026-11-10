@@ -32,3 +32,5 @@ DEFLECTION_DEFAULT_MM: float = 0.1
 DEFLECTION_MIN_MM: float = 0.01
 DEFLECTION_MAX_MM: float = 1.0
 ANGULAR_DEFAULT_DEG: float = 0.5
+
+OCP_VERSION: str = os.environ.get("OCP_VERSION", "8.0.1")

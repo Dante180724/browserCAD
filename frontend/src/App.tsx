@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ModelViewer } from "./components/ModelViewer";
 import { FileUpload } from "./components/FileUpload";
 import { VirtualFileSystem } from "./utils/VirtualFileSystem";
+import type { StepMeta } from "./services/stepConversion";
 import { Provider } from "./components/UI/provider";
 import ViewerBackground from "./components/UI/ViewerBackground";
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
@@ -12,11 +13,12 @@ const MotionBox = motion(Box);
 function App() {
   const [fileSystem, setFileSystem] = useState<VirtualFileSystem | null>(null);
   const [isClosingViewer, setIsClosingViewer] = useState(false);
+  const [stepMeta, setStepMeta] = useState<StepMeta | null>(null);
 
   const isViewerVisible = !!fileSystem && !isClosingViewer;
   const isUploadLayout = !isViewerVisible;
 
-  const handleFilesSelect = (files: File[]) => {
+  const handleFilesSelect = (files: File[], convertedMeta?: StepMeta | null) => {
     // Dispose of old file system if it exists
     if (fileSystem) {
       fileSystem.dispose();
@@ -26,11 +28,13 @@ function App() {
     const vfs = new VirtualFileSystem(files);
     setIsClosingViewer(false);
     setFileSystem(vfs);
+    setStepMeta(convertedMeta ?? null);
   };
 
   const handleReset = () => {
     if (fileSystem) {
       setIsClosingViewer(true);
+      setStepMeta(null);
     }
   };
 
@@ -58,13 +62,14 @@ function App() {
               >
                 BrowserCAD
               </Heading>
-              <Text
-                mt="2"
-                fontSize={{ base: "sm", md: "md" }}
-                color="whiteAlpha.800"
-              >
-                Загружайте модель и сразу переходите в полноэкранный просмотр.
-              </Text>
+            <Text
+              mt="2"
+              fontSize={{ base: "sm", md: "md" }}
+              color="whiteAlpha.800"
+            >
+              Загружайте .glb, .stl или инженерный .step (ISO 10303) — и сразу
+              переходите в полноэкранный просмотр.
+            </Text>
             </Box>
           )}
 
@@ -113,7 +118,11 @@ function App() {
               position="relative"
             >
               {fileSystem ? (
-                <ModelViewer fileSystem={fileSystem} onReset={handleReset} />
+                <ModelViewer
+                  fileSystem={fileSystem}
+                  onReset={handleReset}
+                  stepMeta={stepMeta}
+                />
               ) : (
                 <FileUpload onFilesSelect={handleFilesSelect} />
               )}

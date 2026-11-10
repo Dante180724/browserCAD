@@ -33,10 +33,13 @@ import {
   FiUpload,
 } from "react-icons/fi";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+import { StepMetaPanel } from "../StepMetaPanel";
+import type { StepMeta } from "../../services/stepConversion";
 
 interface ModelViewerProps {
   fileSystem: VirtualFileSystem | null;
   onReset: () => void;
+  stepMeta?: StepMeta | null;
 }
 
 interface GltfResource {
@@ -132,7 +135,7 @@ const GeometryPanel = memo(function GeometryPanel({
   );
 });
 
-export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
+export function ModelViewer({ fileSystem, onReset, stepMeta }: ModelViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -186,6 +189,9 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
   // Distance measurement state
   const [distanceMeasureEnabled, setDistanceMeasureEnabled] = useState(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
+
+  // STEP-метрики (OpenCASCADE): панель слева внизу + switch в тулбаре
+  const [stepMetaVisible, setStepMetaVisible] = useState(true);
   const clickCountRef = useRef(0);
   const pointsRef = useRef<[THREE.Vector3, THREE.Vector3]>([
     new THREE.Vector3(),
@@ -1663,6 +1669,8 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
         </Box>
       )}
 
+      {stepMeta && stepMetaVisible && <StepMetaPanel meta={stepMeta} />}
+
       <Box
         position="absolute"
         left="50%"
@@ -1783,6 +1791,21 @@ export function ModelViewer({ fileSystem, onReset }: ModelViewerProps) {
           <Box w="1px" h="40px" bg="blackAlpha.100" mx="1" flexShrink={0} />
 
           <HStack gap="1" pl="1">
+            {stepMeta && (
+              <Switch.Root
+                size="sm"
+                px="2"
+                checked={stepMetaVisible}
+                onCheckedChange={(event) =>
+                  setStepMetaVisible(!!event.checked)
+                }
+                title="Инженерные метрики (OpenCASCADE)"
+              >
+                <Switch.HiddenInput />
+                <Switch.Control />
+                <Switch.Label whiteSpace="nowrap">Метрики</Switch.Label>
+              </Switch.Root>
+            )}
             <IconButton
               aria-label="Сбросить изменения"
               variant="ghost"
